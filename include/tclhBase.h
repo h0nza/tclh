@@ -1,6 +1,9 @@
 #ifndef TCLHBASE_H
 #define TCLHBASE_H
 
+#define TCLH_VERSION_MAJOR 1
+#define TCLH_VERSION_MINOR 0
+
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
