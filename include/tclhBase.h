@@ -17,12 +17,12 @@
 /* TBD - constrain length of all arguments in error messages */
 
 #if (TCL_MAJOR_VERSION > 8) || (TCL_MAJOR_VERSION == 8 && TCL_MINOR_VERSION >= 7)
-#define TCLH_TCLAPI_VERSION 0x8070
+#define TCLH_TCLAPI_VERSION 0x0807
 #else
-#define TCLH_TCLAPI_VERSION 0x8060
+#define TCLH_TCLAPI_VERSION 0x0806
 #endif
 
-#if TCLH_TCLAPI_VERSION >= 0x8070
+#if TCLH_TCLAPI_VERSION >= 0x0807
 #include "tommath.h"
 #else
 #define TCLH_USE_TCL_TOMMATH
@@ -70,7 +70,7 @@
  * This typedef is used to store max lengths of Tcl strings.
  * Its use is primarily to avoid compiler warnings with downcasting from size_t.
  */
-#if TCLH_TCLAPI_VERSION < 0x8070
+#if TCLH_TCLAPI_VERSION < 0x0807
     typedef int Tclh_SSizeT;
     #define Tclh_SSizeT_MAX INT_MAX
     typedef unsigned int Tclh_USizeT;
@@ -786,7 +786,7 @@ Tcl_Obj *TclhMapWindowsError(
             if (winErrorMessagePtr[length-1] == L'\r')
                 --length;
         }
-#if TCLH_TCLAPI_VERSION < 0x8070
+#if TCLH_TCLAPI_VERSION < 0x0807
         objPtr =
             Tcl_NewStringObj(Tcl_DStringValue(&ds), Tcl_DStringLength(&ds));
         Tcl_DStringFree(&ds);
