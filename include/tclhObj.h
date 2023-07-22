@@ -309,7 +309,7 @@ int Tclh_ObjToDouble(Tcl_Interp *interp, Tcl_Obj *obj, double *ptr);
 TCLH_INLINE char *
 Tclh_ObjGetBytesByRef(Tcl_Interp *interp, Tcl_Obj *obj, Tclh_SSizeT *lenPtr)
 {
-#if TCLH_TCLAPI_VERSION < 87
+#if TCLH_TCLAPI_VERSION < 0x8070
     return (char *) Tcl_GetByteArrayFromObj(obj, lenPtr);
 #else
     return (char *)Tcl_GetBytesFromObj(interp, obj, lenPtr);
@@ -431,7 +431,7 @@ int Tclh_ObjLibInit(Tcl_Interp *interp)
     gTclBooleanType = Tcl_GetObjType("boolean");
     if (gTclBooleanType == NULL) {
         objP = Tcl_NewBooleanObj(1);
-#if TCLH_TCLAPI_VERSION >= 87
+#if TCLH_TCLAPI_VERSION >= 0x8070
         char b;
         if (Tcl_GetBoolFromObj(NULL, objP, 0, &b) == TCL_OK) {
             gTclBooleanType = objP->typePtr;
@@ -647,7 +647,7 @@ Tclh_ObjToULongLong(Tcl_Interp *interp,
 {
     int ret;
 
-#if TCLH_TCLAPI_VERSION >= 87
+#if TCLH_TCLAPI_VERSION >= 0x8070
     /* TODO - currently disabled so as to get same error for 8.6 and 9.0 builds */
     Tcl_WideUInt uwide;
     ret = Tcl_GetWideUIntFromObj(interp, objP, &uwide);
