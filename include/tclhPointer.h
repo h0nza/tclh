@@ -12,11 +12,18 @@
 #include "tclhHash.h"
 #include <stdarg.h>
 
+/* Typedef: Tclh_PointerRegistry
+ *
+ * See <Registered Pointers>
+ */
+typedef struct TclhPointerRegistryInfo *Tclh_PointerRegistry;
+
 /* Typedef: Tclh_PointerTypeTag
  *
  * See <Pointer Type Tags>.
  */
 typedef Tcl_Obj *Tclh_PointerTypeTag;
+
 
 /* Section: Registered Pointers
  *
@@ -42,6 +49,11 @@ typedef Tcl_Obj *Tclh_PointerTypeTag;
  * If pointer registration is not deemed necessary (dangerous), the functions
  * <Tclh_PointerWrap> and <Tclh_PointerUnwrap> can be used to convert pointers
  * to and from Tcl_Obj values.
+ * 
+ * The pointer registry is by default shared by all extensions and application
+ * within an interpreter. If the embedded wants a private registry, the
+ * preprocessor definition TCLH_POINTER_REGISTRY_NAME should be defined
+ * (as a string) before inclusion of the header.
  *
  * Section: Pointer Type Tags
  *
@@ -68,7 +80,8 @@ typedef Tcl_Obj *Tclh_PointerTypeTag;
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-int Tclh_PointerLibInit(Tcl_Interp *interp);
+Tclh_ReturnCode Tclh_PointerLibInit(Tcl_Interp *interp,
+                                    Tclh_PointerRegistry *ptrRegP);
 
 /* Function: Tclh_PointerTagMatch
  * An application-supplied function called to match a pointer tag.
@@ -89,7 +102,7 @@ int Tclh_PointerLibInit(Tcl_Interp *interp);
  * Returns:
  * *Non-0* if the pointer matches and *0* if it does not.
  */
-int Tclh_PointerTagMatch(Tclh_PointerTypeTag pointer_tag,
+Tclh_Bool Tclh_PointerTagMatch(Tclh_PointerTypeTag pointer_tag,
                          Tclh_PointerTypeTag expected_tag);
 
 /* Function: Tclh_PointerRegister
@@ -116,8 +129,10 @@ int Tclh_PointerTagMatch(Tclh_PointerTypeTag pointer_tag,
  * TCL_ERROR - pointer registration failed. An error message is stored in
  *             the interpreter.
  */
-int Tclh_PointerRegister(Tcl_Interp *interp, void *pointer,
-                         Tclh_PointerTypeTag tag, Tcl_Obj **objPP);
+Tclh_ReturnCode Tclh_PointerRegister(Tcl_Interp *interp,
+                                     void *pointer,
+                                     Tclh_PointerTypeTag tag,
+                                     Tcl_Obj **objPP);
 
 /* Function: Tclh_PointerRegisterCounted
  * Registers a pointer value as being "valid" permitting multiple registrations
@@ -145,8 +160,10 @@ int Tclh_PointerRegister(Tcl_Interp *interp, void *pointer,
  * TCL_ERROR - pointer registration failed. An error message is stored in
  *             the interpreter.
  */
-int Tclh_PointerRegisterCounted(Tcl_Interp *interp, void *pointer,
-                                Tclh_PointerTypeTag tag, Tcl_Obj **objPP);
+Tclh_ReturnCode Tclh_PointerRegisterCounted(Tcl_Interp *interp,
+                                            void *pointer,
+                                            Tclh_PointerTypeTag tag,
+                                            Tcl_Obj **objPP);
 
 /* Function: Tclh_PointerUnregister
  * Unregisters a previously registered pointer.
@@ -167,8 +184,9 @@ int Tclh_PointerRegisterCounted(Tcl_Interp *interp, void *pointer,
  * TCL_ERROR - The pointer was not registered or was registered with a
  *             different type. An error message is left in interp.
  */
-int Tclh_PointerUnregister(Tcl_Interp *interp, const void *pointer, Tclh_PointerTypeTag expected_tag);
-
+Tclh_ReturnCode Tclh_PointerUnregister(Tcl_Interp *interp,
+                                       const void *pointer,
+                                       Tclh_PointerTypeTag expected_tag);
 
 /* Function: Tclh_PointerVerify
  * Verifies that the passed pointer is registered as a valid pointer
@@ -184,7 +202,9 @@ int Tclh_PointerUnregister(Tcl_Interp *interp, const void *pointer, Tclh_Pointer
  * TCL_ERROR - Pointer is unregistered or a different type. An error message
  *             is stored in interp.
  */
-int Tclh_PointerVerify(Tcl_Interp *interp, const void *voidP, Tclh_PointerTypeTag expected_tag);
+Tclh_ReturnCode Tclh_PointerVerify(Tcl_Interp *interp,
+                                   const void *voidP,
+                                   Tclh_PointerTypeTag expected_tag);
 
 /* Function: Tclh_PointerObjGetTag
  * Returns the pointer type tag for a Tcl_Obj pointer wrapper.
@@ -200,7 +220,9 @@ int Tclh_PointerVerify(Tcl_Interp *interp, const void *voidP, Tclh_PointerTypeTa
  * TCL_ERROR - objP is not a wrapped pointer. interp, if not NULL, will hold
  *             error message.
  */
-int Tclh_PointerObjGetTag(Tcl_Interp *interp, Tcl_Obj *objP, Tclh_PointerTypeTag *tagPtr);
+Tclh_ReturnCode Tclh_PointerObjGetTag(Tcl_Interp *interp,
+                                      Tcl_Obj *objP,
+                                      Tclh_PointerTypeTag *tagPtr);
 
 /* Function: Tclh_PointerObjUnregister
  * Unregisters a previously registered pointer passed in as a Tcl_Obj.
@@ -219,8 +241,10 @@ int Tclh_PointerObjGetTag(Tcl_Interp *interp, Tcl_Obj *objP, Tclh_PointerTypeTag
  * TCL_ERROR - The pointer was not registered or was registered with a
  *             different type. An error message is left in interp.
  */
-int Tclh_PointerObjUnregister(Tcl_Interp *interp, Tcl_Obj *objP,
-                              void **pointerP, Tclh_PointerTypeTag tag);
+Tclh_ReturnCode Tclh_PointerObjUnregister(Tcl_Interp *interp,
+                                          Tcl_Obj *objP,
+                                          void **pointerP,
+                                          Tclh_PointerTypeTag tag);
 
 /* Function: Tclh_PointerObjUnregisterAnyOf
  * Unregisters a previously registered pointer passed in as a Tcl_Obj
@@ -239,8 +263,10 @@ int Tclh_PointerObjUnregister(Tcl_Interp *interp, Tcl_Obj *objP,
  * TCL_ERROR - The pointer was not registered or was registered with a
  *             different type. An error message is left in interp.
  */
-int Tclh_PointerObjUnregisterAnyOf(Tcl_Interp *interp, Tcl_Obj *objP,
-                                   void **pointerP, ... /* tag, ... , NULL */);
+Tclh_ReturnCode Tclh_PointerObjUnregisterAnyOf(Tcl_Interp *interp,
+                                               Tcl_Obj *objP,
+                                               void **pointerP,
+                                               ... /* tag, ... , NULL */);
 
 /* Function: Tclh_PointerObjVerify
  * Verifies a Tcl_Obj contains a wrapped pointer that is registered
@@ -259,8 +285,10 @@ int Tclh_PointerObjUnregisterAnyOf(Tcl_Interp *interp, Tcl_Obj *objP,
  * TCL_ERROR - The pointer was not registered or was registered with a
  *             different type. An error message is left in interp.
  */
-int Tclh_PointerObjVerify(Tcl_Interp *interp, Tcl_Obj *objP,
-                          void **pointerP, Tclh_PointerTypeTag expected_tag);
+Tclh_ReturnCode Tclh_PointerObjVerify(Tcl_Interp *interp,
+                                      Tcl_Obj *objP,
+                                      void **pointerP,
+                                      Tclh_PointerTypeTag expected_tag);
 
 /* Function: Tclh_PointerObjVerifyAnyOf
  * Verifies a Tcl_Obj contains a wrapped pointer that is registered
@@ -280,8 +308,10 @@ int Tclh_PointerObjVerify(Tcl_Interp *interp, Tcl_Obj *objP,
  *             type that is not one of the passed ones.
  *             An error message is left in interp.
  */
-int Tclh_PointerObjVerifyAnyOf(Tcl_Interp *interp, Tcl_Obj *objP,
-                          void **pointerP, ... /* tag, tag, NULL */);
+Tclh_ReturnCode Tclh_PointerObjVerifyAnyOf(Tcl_Interp *interp,
+                                           Tcl_Obj *objP,
+                                           void **pointerP,
+                                           ... /* tag, tag, NULL */);
 
 /* Function: Tclh_PointerWrap
  * Wraps a pointer into a Tcl_Obj.
@@ -316,8 +346,10 @@ Tcl_Obj *Tclh_PointerWrap(void *pointer, Tclh_PointerTypeTag tag);
  * TCL_OK    - Success, with the unwrapped pointer stored in *pointerP.
  * TCL_ERROR - Failure, with interp containing error message.
  */
-int Tclh_PointerUnwrap(Tcl_Interp *interp, Tcl_Obj *objP,
-                        void **pointerP, Tclh_PointerTypeTag expected_tag);
+Tclh_ReturnCode Tclh_PointerUnwrap(Tcl_Interp *interp,
+                                   Tcl_Obj *objP,
+                                   void **pointerP,
+                                   Tclh_PointerTypeTag expected_tag);
 
 /* Function: Tclh_PointerUnwrapAnyOf
  * Unwraps a Tcl_Obj representing a pointer checking it is of several
@@ -331,17 +363,20 @@ int Tclh_PointerUnwrap(Tcl_Interp *interp, Tcl_Obj *objP,
  *            by a NULL argument.
  *
  * Returns:
- * Pointer to a Tcl_Obj with reference count 0.
+ * TCL_OK    - Success, with the unwrapped pointer stored in *pointerP.
+ * TCL_ERROR - Failure, with interp containing error message.
  */
-int Tclh_PointerUnwrapAnyOf(Tcl_Interp *interp, Tcl_Obj *objP,
-                           void **pointerP, ... /* tag, ..., NULL */);
+Tclh_ReturnCode Tclh_PointerUnwrapAnyOf(Tcl_Interp *interp,
+                                        Tcl_Obj *objP,
+                                        void **pointerP,
+                                        ... /* tag, ..., NULL */);
 
 /* Function: Tclh_PointerEnumerate
  * Returns a list of registered pointers.
  *
  * Parameters:
  * interp - interpreter
- * tag - Type tag to match
+ * tag - Type tag to match. If NULL, pointers with all tags are returned.
  *
  * Returns:
  * Pointer to a Tcl_Obj with reference count 0.
@@ -362,9 +397,9 @@ Tcl_Obj *Tclh_PointerEnumerate(Tcl_Interp *interp, Tclh_PointerTypeTag tag);
  * Returns:
  * A Tcl result code.
  */
-int Tclh_PointerSubtagDefine(Tcl_Interp *interp,
-                             Tclh_PointerTypeTag subtagObj,
-                             Tclh_PointerTypeTag supertagObj);
+Tclh_ReturnCode Tclh_PointerSubtagDefine(Tcl_Interp *interp,
+                                         Tclh_PointerTypeTag subtagObj,
+                                         Tclh_PointerTypeTag supertagObj);
 
 /* Function: Tclh_PointerSubtagRemove
  * Remove a subtag definition
@@ -376,8 +411,8 @@ int Tclh_PointerSubtagDefine(Tcl_Interp *interp,
  * Returns:
  * A Tcl result code.
  */
-int Tclh_PointerSubtagRemove(Tcl_Interp *interp,
-                             Tclh_PointerTypeTag tagObj);
+Tclh_ReturnCode Tclh_PointerSubtagRemove(Tcl_Interp *interp,
+                                         Tclh_PointerTypeTag tagObj);
 
 /* Function: Tclh_PointerSubtags
  * Returns dictionary mapping subtags to their supertags
@@ -411,10 +446,10 @@ Tcl_Obj *Tclh_PointerSubtags(Tcl_Interp *interp);
  * Returns:
  * A Tcl return code.
  */
-int Tclh_PointerCast(Tcl_Interp *interp,
-                     Tcl_Obj *ptrObj,
-                     Tclh_PointerTypeTag newTagObj,
-                     Tcl_Obj **castPtrObj);
+Tclh_ReturnCode Tclh_PointerCast(Tcl_Interp *interp,
+                                 Tcl_Obj *ptrObj,
+                                 Tclh_PointerTypeTag newTagObj,
+                                 Tcl_Obj **castPtrObj);
 
 #ifdef TCLH_SHORTNAMES
 
@@ -456,10 +491,10 @@ typedef struct TclhPointerRecord {
     int nRefs;                  /* Number of references to the pointer */
 } TclhPointerRecord;
 
-typedef struct TclhPointerRegistry {
+typedef struct TclhPointerRegistryInfo {
     Tcl_HashTable pointers;/* Table of registered pointers */
     Tcl_HashTable castables;/* Table of permitted casts subclass -> class */
-} TclhPointerRegistry;
+} TclhPointerRegistryInfo;
 
 
 /*
@@ -503,15 +538,25 @@ PointerTypeSame(Tclh_PointerTypeTag pointer_tag,
                : Tclh_PointerTagMatch(pointer_tag, expected_tag);
 }
 
-static TclhPointerRegistry *TclhInitPointerRegistry(Tcl_Interp *interp);
-static int PointerTypeCompatible(TclhPointerRegistry *registryP,
+static TclhPointerRegistryInfo *TclhInitPointerRegistry(Tcl_Interp *interp);
+static int PointerTypeCompatible(TclhPointerRegistryInfo *registryP,
                                  Tclh_PointerTypeTag tag,
                                  Tclh_PointerTypeTag expected);
 
-int
-Tclh_PointerLibInit(Tcl_Interp *interp)
+Tclh_ReturnCode
+Tclh_PointerLibInit(Tcl_Interp *interp, Tclh_PointerRegistry *ptrRegP)
 {
-    return Tclh_BaseLibInit(interp);
+    int ret;
+    ret = Tclh_BaseLibInit(interp);
+    if (ret == TCL_OK) {
+        Tclh_PointerRegistry reg;
+        reg = TclhInitPointerRegistry(interp);
+        if (reg)
+            *ptrRegP = reg;
+        else
+            ret = TCL_ERROR;
+    }
+    return ret;
 }
 
 Tcl_Obj *
@@ -536,7 +581,7 @@ Tclh_PointerUnwrap(Tcl_Interp *interp,
                    Tclh_PointerTypeTag expected_tag)
 {
     Tclh_PointerTypeTag tag;
-    TclhPointerRegistry *registryP;
+    TclhPointerRegistryInfo *registryP;
     void *pv;
 
     /* Try converting Tcl_Obj internal rep */
@@ -615,8 +660,8 @@ static void
 UpdatePointerTypeString(Tcl_Obj *objP)
 {
     Tclh_PointerTypeTag tagObj;
-    Tclh_SSizeT len;
-    Tclh_SSizeT taglen;
+    Tcl_Size len;
+    Tcl_Size taglen;
     char *tagStr;
     char *bytes;
 
@@ -751,7 +796,7 @@ TclhPointerRecordFree(TclhPointerRecord *ptrRecP)
 static void
 TclhCleanupPointerRegistry(ClientData clientData, Tcl_Interp *interp)
 {
-    TclhPointerRegistry *registryP = (TclhPointerRegistry *)clientData;
+    TclhPointerRegistryInfo *registryP = (TclhPointerRegistryInfo *)clientData;
     Tcl_HashTable *hTblPtr;
     Tcl_HashEntry *he;
     Tcl_HashSearch hSearch;
@@ -775,14 +820,19 @@ TclhCleanupPointerRegistry(ClientData clientData, Tcl_Interp *interp)
     Tcl_Free((void *)registryP);
 }
 
-static TclhPointerRegistry *
+#ifndef TCLH_POINTER_REGISTRY_NAME
+/* This will be shared for all extensions if embedder has not defined it */
+# define TCLH_POINTER_REGISTRY_NAME "TclhPointerTable"
+#endif
+
+static TclhPointerRegistryInfo *
 TclhInitPointerRegistry(Tcl_Interp *interp)
 {
-    TclhPointerRegistry *registryP;
-    static const char *const pointerTableKey = TCLH_EMBEDDER "PointerTable";
+    TclhPointerRegistryInfo *registryP;
+    static const char *const pointerTableKey = TCLH_POINTER_REGISTRY_NAME;
     registryP = Tcl_GetAssocData(interp, pointerTableKey, NULL);
     if (registryP == NULL) {
-        registryP = (TclhPointerRegistry *) Tcl_Alloc(sizeof(*registryP));
+        registryP = (TclhPointerRegistryInfo *) Tcl_Alloc(sizeof(*registryP));
         Tcl_InitHashTable(&registryP->pointers, TCL_ONE_WORD_KEYS);
         Tcl_InitHashTable(&registryP->castables, TCL_STRING_KEYS);
         Tcl_SetAssocData(
@@ -798,7 +848,7 @@ TclhPointerRegister(Tcl_Interp *interp,
                     Tcl_Obj **objPP,
                     int counted)
 {
-    TclhPointerRegistry *registryP;
+    TclhPointerRegistryInfo *registryP;
     Tcl_HashTable *hTblPtr;
     Tcl_HashEntry *he;
     int            newEntry;
@@ -879,7 +929,7 @@ Tclh_PointerRegisterCounted(Tcl_Interp *interp,
 }
 
 static int
-PointerTypeCompatible(TclhPointerRegistry *registryP,
+PointerTypeCompatible(TclhPointerRegistryInfo *registryP,
                       Tclh_PointerTypeTag tag,
                       Tclh_PointerTypeTag expected)
 {
@@ -916,7 +966,7 @@ PointerVerifyOrUnregister(Tcl_Interp *interp,
                           Tclh_PointerTypeTag tag,
                           int unregister)
 {
-    TclhPointerRegistry *registryP;
+    TclhPointerRegistryInfo *registryP;
     Tcl_HashEntry *he;
 
     registryP = TclhInitPointerRegistry(interp);
@@ -952,7 +1002,7 @@ Tcl_Obj *
 Tclh_PointerEnumerate(Tcl_Interp *interp,
                       Tclh_PointerTypeTag tag)
 {
-    TclhPointerRegistry *registryP;
+    TclhPointerRegistryInfo *registryP;
     Tcl_HashEntry *he;
     Tcl_HashSearch hSearch;
     Tcl_HashTable *hTblPtr;
@@ -1079,7 +1129,7 @@ int Tclh_PointerSubtagDefine(Tcl_Interp *interp,
                              Tclh_PointerTypeTag subtagObj,
                              Tclh_PointerTypeTag supertagObj)
 {
-    TclhPointerRegistry *registryP;
+    TclhPointerRegistryInfo *registryP;
     int tclResult;
     const char *subtag;
     registryP = TclhInitPointerRegistry(interp);
@@ -1099,7 +1149,7 @@ int Tclh_PointerSubtagDefine(Tcl_Interp *interp,
 int Tclh_PointerSubtagRemove(Tcl_Interp *interp,
                              Tclh_PointerTypeTag tagObj)
 {
-    TclhPointerRegistry *registryP;
+    TclhPointerRegistryInfo *registryP;
     Tcl_HashEntry *he;
 
     registryP = TclhInitPointerRegistry(interp);
@@ -1118,7 +1168,7 @@ int Tclh_PointerSubtagRemove(Tcl_Interp *interp,
 
 Tcl_Obj *Tclh_PointerSubtags(Tcl_Interp *interp)
 {
-    TclhPointerRegistry *registryP;
+    TclhPointerRegistryInfo *registryP;
     Tcl_Obj *objP;
     Tcl_HashEntry *heP;
     Tcl_HashTable *htP;
@@ -1147,7 +1197,7 @@ Tclh_PointerCast(Tcl_Interp *interp,
                  Tclh_PointerTypeTag newTag,
                  Tcl_Obj **castPtrObj)
 {
-    TclhPointerRegistry *registryP;
+    TclhPointerRegistryInfo *registryP;
     Tclh_PointerTypeTag oldTag;
     TclhPointerRecord *ptrRecP;
     Tcl_HashEntry *he;
