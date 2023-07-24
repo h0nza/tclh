@@ -677,8 +677,6 @@ Tclh_PointerWrap(void *pointerValue, Tclh_PointerTypeTag tag)
 Tclh_ReturnCode
 Tclh_PointerUnwrap(Tcl_Interp *interp, Tcl_Obj *objP, void **pvP)
 {
-    void *pv;
-
     /* Try converting Tcl_Obj internal rep */
     if (objP->typePtr != &gPointerType) {
         if (SetPointerFromAny(interp, objP) != TCL_OK)
@@ -1155,7 +1153,7 @@ Tclh_PointerEnumerate(Tcl_Interp *interp,
 
     if (registryP == NULL) {
         if (interp == NULL)
-            return TCL_ERROR;
+            return resultObj;
         registryP = TclhInitPointerRegistry(interp);
     }
     hTblPtr   = &registryP->pointers;
@@ -1340,13 +1338,13 @@ Tclh_PointerSubtags(Tcl_Interp *interp, Tclh_PointerRegistry registryP)
     Tcl_HashTable *htP;
     Tcl_HashSearch hSearch;
 
+    objP = Tcl_NewListObj(0, NULL);
     if (registryP == NULL) {
         if (interp == NULL)
-            return TCL_ERROR;
+            return objP;
         registryP = TclhInitPointerRegistry(interp);
     }
     htP  = &registryP->castables;
-    objP = Tcl_NewListObj(0, NULL);
 
     for (heP = Tcl_FirstHashEntry(htP, &hSearch); heP != NULL;
          heP = Tcl_NextHashEntry(&hSearch)) {
