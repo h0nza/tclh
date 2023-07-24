@@ -20,7 +20,9 @@
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-TCLH_INLINE int Tclh_EncodingLibInit(Tcl_Interp *interp) {}
+TCLH_INLINE int Tclh_EncodingLibInit(Tcl_Interp *interp) {
+    return Tclh_BaseLibInit(interp);
+}
 
 /* Function: Tclh_ExternalToUtf
  * Wrapper around Tcl_ExternalToUtf to allow lengths > INT_MAX.
