@@ -303,6 +303,8 @@ Tclh_ReturnCode Tclh_ObjToDouble(Tcl_Interp *interp, Tcl_Obj *obj, double *ptr);
 /* Function: Tclh_ObjGetBytesByRef
  * Retrieves a reference to the byte array in a Tcl_Obj.
  *
+ * Primary purpose is to hide Tcl version differences.
+ *
  * Parameters:
  * interp - Interpreter for error messages. May be NULL.
  * obj - Tcl_Obj containing the bytes
@@ -316,10 +318,10 @@ Tclh_ReturnCode Tclh_ObjToDouble(Tcl_Interp *interp, Tcl_Obj *obj, double *ptr);
 TCLH_INLINE char *
 Tclh_ObjGetBytesByRef(Tcl_Interp *interp, Tcl_Obj *obj, Tcl_Size *lenPtr)
 {
-#if TCLH_TCLAPI_VERSION < 0x0807
-    return (char *) Tcl_GetByteArrayFromObj(obj, lenPtr);
-#else
+#ifdef HAVE_TCL87API
     return (char *)Tcl_GetBytesFromObj(interp, obj, lenPtr);
+#else
+    return (char *) Tcl_GetByteArrayFromObj(obj, lenPtr);
 #endif
 }
 
