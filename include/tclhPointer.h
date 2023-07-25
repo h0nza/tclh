@@ -76,6 +76,9 @@ typedef Tcl_Obj *Tclh_PointerTypeTag;
  * interp - Tcl interpreter in which to initialize.
  * ptrRegP - Location to store reference to the pointer registry. May be NULL.
  *
+ * Any allocated resource are automatically freed up when the interpreter
+ * is deleted.
+ *
  * Returns:
  * TCL_OK    - Library was successfully initialized.
  * TCL_ERROR - Initialization failed. Library functions must not be called.
@@ -551,6 +554,8 @@ Tclh_ReturnCode Tclh_PointerCast(Tcl_Interp *interp,
 
 #ifdef TCLH_SHORTNAMES
 
+#define PointerLibInit            Tclh_PointerLibInit
+#define PointerLibFinit           Tclh_PointerLibFinit
 #define PointerRegister           Tclh_PointerRegister
 #define PointerUnregister         Tclh_PointerUnregister
 #define PointerVerify             Tclh_PointerVerify
