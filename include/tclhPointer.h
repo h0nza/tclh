@@ -2,7 +2,7 @@
 #define TCLHPOINTER_H
 
 /*
- * Copyright (c) 2021-2022, Ashok P. Nadkarni
+ * Copyright (c) 2021-2023, Ashok P. Nadkarni
  * All rights reserved.
  *
  * See the file LICENSE for license
@@ -49,7 +49,7 @@ typedef Tcl_Obj *Tclh_PointerTypeTag;
  * If pointer registration is not deemed necessary (dangerous), the functions
  * <Tclh_PointerWrap> and <Tclh_PointerUnwrapTagged> can be used to convert pointers
  * to and from Tcl_Obj values.
- * 
+ *
  * The pointer registry is by default shared by all extensions and application
  * within an interpreter. If the embedded wants a private registry, the
  * preprocessor definition TCLH_POINTER_REGISTRY_NAME should be defined
@@ -966,7 +966,7 @@ static TclhPointerRegistryInfo *
 TclhInitPointerRegistry(Tcl_Interp *interp)
 {
     TclhPointerRegistryInfo *registryP;
-    static const char *const pointerTableKey = TCLH_POINTER_REGISTRY_NAME;
+    const char * const pointerTableKey = TCLH_POINTER_REGISTRY_NAME;
     registryP = Tcl_GetAssocData(interp, pointerTableKey, NULL);
     if (registryP == NULL) {
         registryP = (TclhPointerRegistryInfo *) Tcl_Alloc(sizeof(*registryP));
