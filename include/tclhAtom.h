@@ -1,5 +1,5 @@
-#ifndef TCLHPOINTER_H
-#define TCLHPOINTER_H
+#ifndef TCLHATOM_H
+#define TCLHATOM_H
 
 /*
  * Copyright (c) 2021-2023, Ashok P. Nadkarni
@@ -14,7 +14,7 @@
  *
  * See <Atoms>.
  */
-typedef struct TclhAtomRegistryInfo *Tclh_AtomRegistry;
+typedef Tcl_HashTable *Tclh_AtomRegistry;
 
 /* Section: Atoms
  *
