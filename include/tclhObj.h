@@ -434,7 +434,7 @@ Tclh_ObjLibInit(Tcl_Interp *interp)
 
     gTclWideIntType = Tcl_GetObjType("wideInt");
     if (gTclWideIntType == NULL) {
-        objP            = Tcl_NewWideIntObj(0);
+        objP            = Tcl_NewWideIntObj(0x100000000);
         gTclWideIntType = objP->typePtr;
         Tcl_DecrRefCount(objP);
     }
@@ -458,7 +458,7 @@ Tclh_ObjLibInit(Tcl_Interp *interp)
     gTclBignumType = Tcl_GetObjType("bignum"); /* Likely NULL as it is not registered */
     if (gTclBignumType == NULL) {
         mp_int temp;
-        objP           = Tcl_NewStringObj("0xffffffffffffffff", -1);
+        objP    = Tcl_NewStringObj("0xffffffffffffffff", -1);
         int ret = Tcl_GetBignumFromObj(interp, objP, &temp);
         if (ret == TCL_OK) {
             gTclBignumType = objP->typePtr;
@@ -468,6 +468,27 @@ Tclh_ObjLibInit(Tcl_Interp *interp)
     }
 
     return TCL_OK;
+}
+
+Tcl_ObjType *
+Tclh_GetObjTypeDescriptor(const char *typename)
+{
+    if (!strcmp(typename, "int")) {
+        return gTclIntType;
+    }
+    if (!strcmp(typename, "wide") || !strcmp(typename, "wideInt")) {
+        return gTclWideIntType;
+    }
+    if (!strcmp(typename, "double")) {
+        return gTclDoubleType;
+    }
+    if (!strcmp(typename, "bool") || !strcmp(typename, "boolean")) {
+        return gTclBooleanType;
+    }
+    if (!strcmp(typename, "bignum")) {
+        return gTclBignumType;
+    }
+    return NULL;
 }
 
 Tclh_ReturnCode
