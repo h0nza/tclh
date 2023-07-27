@@ -60,9 +60,7 @@ typedef Tcl_Obj *Tclh_PointerTypeTag;
  * Pointers are optionally associated with a type using a type tag
  * so that when checking arguments, the pointer type tag can be checked as
  * well. The type tag is typedefed as Tcl's *Tcl_Obj* type and is
- * treated as opaque as far as this library is concerned. The application
- * must provide a related function, <Tclh_PointerTagMatch>, for the purpose
- * of checking a pointer tag.
+ * treated as opaque as far as this library is concerned.
  *
  * As a special case, no type checking is done on pointers with a type tag of
  * NULL.
@@ -86,28 +84,6 @@ typedef Tcl_Obj *Tclh_PointerTypeTag;
  */
 Tclh_ReturnCode Tclh_PointerLibInit(Tcl_Interp *interp,
                                     Tclh_PointerRegistry *ptrRegP);
-
-/* Function: Tclh_PointerTagMatch
- * An application-supplied function called to match a pointer tag.
- *
- * Parameters:
- * pointer_tag - The tag associated with a pointer
- * expected_tag - The tag that *pointer_tag* is expected to match
- *
- * This is an *application-supplied* function that is called by the library
- * to see if the tag *pointer_tag* for a pointer matches the tag
- * *expected_tag*. The function should return a non-zero value on
- * a match and *0* otherwise. It is up to the application to decide what
- * construes a match, e.g. taking any inheritance models into consideration.
- *
- * Note that this function is only called if *pointer_tag* and
- * *expected_tag* do not have the same value.
- *
- * Returns:
- * *Non-0* if the pointer matches and *0* if it does not.
- */
-Tclh_Bool Tclh_PointerTagMatch(Tclh_PointerTypeTag pointer_tag,
-                               Tclh_PointerTypeTag expected_tag);
 
 /* Function: Tclh_PointerRegister
  * Registers a pointer value as being "valid".
@@ -633,14 +609,8 @@ TCLH_INLINE Tclh_PointerTypeTag PointerTypeGet(Tcl_Obj *objP) {
 TCLH_INLINE void PointerTypeSet(Tcl_Obj *objP, Tclh_PointerTypeTag tag) {
     objP->internalRep.twoPtrValue.ptr2 = (void*)tag;
 }
-TCLH_INLINE int
-PointerTypeSame(Tclh_PointerTypeTag pointer_tag,
-                Tclh_PointerTypeTag expected_tag) {
-    return pointer_tag == expected_tag
-               ? 1
-               : Tclh_PointerTagMatch(pointer_tag, expected_tag);
-}
-
+static int PointerTypeSame(Tclh_PointerTypeTag pointer_tag,
+                           Tclh_PointerTypeTag expected_tag);
 static TclhPointerRegistryInfo *TclhInitPointerRegistry(Tcl_Interp *interp);
 static int PointerTypeCompatible(TclhPointerRegistryInfo *registryP,
                                  Tclh_PointerTypeTag tag,
@@ -662,6 +632,19 @@ Tclh_PointerLibInit(Tcl_Interp *interp, Tclh_PointerRegistry *ptrRegP)
             ret = TCL_ERROR;
     }
     return ret;
+}
+
+static int
+PointerTypeSame(Tclh_PointerTypeTag pointer_tag,
+                Tclh_PointerTypeTag expected_tag)
+{
+    if (pointer_tag == expected_tag || expected_tag == NULL)
+        return 1;
+
+    if (pointer_tag == NULL)
+        return 0;
+
+    return !strcmp(Tcl_GetString(pointer_tag), Tcl_GetString(expected_tag));
 }
 
 Tcl_Obj *

@@ -107,7 +107,7 @@ Tcl_Obj *Tclh_AtomGet(Tcl_Interp *interp, TclhAtomRegistryInfo *registryP, const
 {
     if (registryP == NULL) {
         if (interp == NULL) {
-            return TCL_ERROR; /* Either interp or registryP should have been
+            return NULL; /* Either interp or registryP should have been
                                  input */
         }
         registryP = TclhInitAtomRegistry(interp);

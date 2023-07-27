@@ -146,6 +146,53 @@ Tclh_ObjToUShort(Tcl_Interp *interp, Tcl_Obj *obj, unsigned short *ptr);
  */
 Tclh_ReturnCode Tclh_ObjToInt(Tcl_Interp *interp, Tcl_Obj *obj, int *ptr);
 
+/* Function: Tclh_ObjFromInt
+ * Returns a Tcl_Obj wrapping a *int*
+ *
+ * Parameters:
+ *  intVal - int value to be wrapped
+ *
+ * Returns:
+ * A pointer to a Tcl_Obj with a zero reference count.
+ */
+TCLH_INLINE Tcl_Obj *Tclh_ObjFromInt(int intVal) {
+    return Tcl_NewIntObj(intVal);
+}
+
+/* Function: Tclh_ObjToSizeInt
+ * Unwraps a Tcl_Obj into a Tcl *Tcl_Size* value type.
+ *
+ * Parameters:
+ * interp - Interpreter
+ * obj - Tcl_Obj from which to extract the number
+ * ptr - location to store extracted number
+ *
+ * Returns:
+ * Returns TCL_OK and stores the value in location pointed to by *ptr* if the
+ * passed Tcl_Obj contains an integer that fits in a C *Tcl_Size* type. Otherwise
+ * returns TCL_ERROR with an error message in the interpreter.
+ */
+TCLH_INLINE Tclh_ReturnCode Tclh_ObjToSizeInt(Tcl_Interp *interp, Tcl_Obj *obj, Tcl_Size *ptr) {
+    return Tcl_GetSizeIntFromObj(interp, obj, ptr);
+}
+
+/* Function: Tclh_ObjFromSizeInt
+ * Returns a Tcl_Obj wrapping a *int*
+ *
+ * Parameters:
+ *  intVal - int value to be wrapped
+ *
+ * Returns:
+ * A pointer to a Tcl_Obj with a zero reference count.
+ */
+TCLH_INLINE Tcl_Obj *Tclh_ObjFromSizeInt(Tcl_Size val) {
+    if (sizeof(int) == sizeof(Tcl_Size)) {
+        return Tcl_NewIntObj(val);
+    } else {
+        return Tcl_NewWideIntObj(val);
+    }
+}
+
 /* Function: Tclh_ObjToUInt
  * Unwraps a Tcl_Obj into a C *unsigned int* value type.
  *
@@ -176,6 +223,19 @@ Tclh_ObjToUInt(Tcl_Interp *interp, Tcl_Obj *obj, unsigned int *ptr);
  * returns TCL_ERROR with an error message in the interpreter.
  */
 Tclh_ReturnCode Tclh_ObjToLong(Tcl_Interp *interp, Tcl_Obj *obj, long *ptr);
+
+/* Function: Tclh_ObjFromLong
+ * Returns a Tcl_Obj wrapping a *long*
+ *
+ * Parameters:
+ *  ll - long value to be wrapped
+ *
+ * Returns:
+ * A pointer to a Tcl_Obj with a zero reference count.
+ */
+TCLH_INLINE Tcl_Obj *Tclh_ObjFromLong(long longVal) {
+    return Tcl_NewLongObj(longVal);
+}
 
 /* Function: Tclh_ObjToULong
  * Unwraps a Tcl_Obj into a C *unsigned long* value type.
@@ -219,6 +279,19 @@ Tcl_Obj *Tclh_ObjFromULong(unsigned long ull);
  */
 Tclh_ReturnCode
 Tclh_ObjToWideInt(Tcl_Interp *interp, Tcl_Obj *obj, Tcl_WideInt *ptr);
+
+/* Function: Tclh_ObjFromWideInt
+ * Returns a Tcl_Obj wrapping a *Tcl_WideInt*
+ *
+ * Parameters:
+ *  wide - Tcl_WideInt value to be wrapped
+ *
+ * Returns:
+ * A pointer to a Tcl_Obj with a zero reference count.
+ */
+TCLH_INLINE Tcl_Obj *Tclh_ObjFromWideInt(Tcl_WideInt wide) {
+    return Tcl_NewWideIntObj(wide);
+}
 
 /* Function: Tclh_ObjToLongLong
  * Unwraps a Tcl_Obj into a C *long long* value type.
@@ -625,12 +698,6 @@ Tcl_Obj *Tclh_ObjFromULong(unsigned long ul)
         return Tcl_NewWideIntObj(ul);
     else
         return Tclh_ObjFromULongLong(ul);
-}
-
-Tclh_ReturnCode
-Tclh_ObjToBoolean(Tcl_Interp *interp, Tcl_Obj *objP, int *valP)
-{
-    return Tcl_GetBooleanFromObj(interp, objP, valP);
 }
 
 Tclh_ReturnCode
