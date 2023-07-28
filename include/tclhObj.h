@@ -825,6 +825,7 @@ negative_error:
 
 Tcl_Obj *Tclh_ObjFromULongLong(unsigned long long ull)
 {
+    /* TODO - see how TIP 648 does it */
     TCLH_ASSERT(sizeof(Tcl_WideInt) == sizeof(unsigned long long));
     if (ull <= LLONG_MAX)
         return Tcl_NewWideIntObj((Tcl_WideInt) ull);

@@ -51,12 +51,33 @@
 # endif
 #endif
 
+#define TCLH_MAKESTRINGLITERAL(s_) # s_
+ /*
+  * Stringifying special CPP symbols (__LINE__) needs another level of macro
+  */
+#define TCLH_MAKESTRINGLITERAL2(s_) TCLH_MAKESTRINGLITERAL(s_)
+
 #if TCLH_ASSERT_LEVEL == 0
 # define TCLH_ASSERT(bool_) (void) 0
 #elif TCLH_ASSERT_LEVEL == 1
 # define TCLH_ASSERT(bool_) (void)( (bool_) || (__debugbreak(), 0))
+#elif TCLSH_ENABLE_ASSERT == 2 && defined(_WIN32)
+#define TCLSH_ASSERT(bool_)                                             \
+    (void)((bool_)                                                      \
+           || (DebugOutput("Assertion (" #bool_                         \
+                           ") failed at line " TCLH_MAKESTRINGLITERAL2( \
+                               __LINE__) " in file " __FILE__ "\n"),    \
+               0))
 #else
-# define TCLH_ASSERT(bool_) (void)( (bool_) || (TCLH_PANIC("Assertion (%s) failed at line %d in file %s.", #bool_, __LINE__, __FILE__), 0) )
+# define TCLH_ASSERT(bool_) (void)( (bool_) || (TCLH_PANIC("Assertion (" #bool_ ") failed at line %d in file %s.", __LINE__, __FILE__), 0) )
+#endif
+
+#if defined(static_assert)
+# define TCLH_STATIC_ASSERT(e_) static_assert(e_)
+#elif defined(C_ASSERT)
+# define TCLH_STATIC_ASSERT(e_) C_ASSERT(e_)
+#else
+# define TCLH_STATIC_ASSERT(e_) assert(e_)
 #endif
 
 #ifdef TCLH_IMPL
@@ -98,7 +119,9 @@ Tclh_memdup(void *from, int len)
 }
 
 TCLH_INLINE Tcl_Size Tclh_strlen(const char *s) {
-    return (Tcl_Size) strlen(s);
+    size_t len = strlen(s);
+    TCLH_ASSERT(len <= TCL_SIZE_MAX);
+    return (Tcl_Size)len;
 }
 
 TCLH_INLINE char *Tclh_strdup(const char *from) {
