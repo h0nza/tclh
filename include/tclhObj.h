@@ -20,14 +20,19 @@
  * the other functions in the module.
  *
  * Parameters:
- * interp - Tcl interpreter in which to initialize.
+ * interp - Tcl interpreter for error messages. May be NULL.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *    the Tclh context associated with the interpreter is used after
+ *    initialization if necessary.
+ *
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Returns:
  * TCL_OK    - Library was successfully initialized.
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-Tclh_ReturnCode Tclh_ObjLibInit(Tcl_Interp *interp);
+Tclh_ReturnCode Tclh_ObjLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_ObjClearPtr
  * Releases a pointer to a *Tcl_Obj* and clears it.
@@ -494,9 +499,14 @@ static const Tcl_ObjType *gTclDoubleType;
 static const Tcl_ObjType *gTclBignumType;
 
 Tclh_ReturnCode
-Tclh_ObjLibInit(Tcl_Interp *interp)
+Tclh_ObjLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
 {
     Tcl_Obj *objP;
+
+    if (tclhCtxP == NULL) {
+        if (Tclh_LibInit(interp, NULL) != TCL_OK)
+            return TCL_ERROR;
+    }
 
     gTclIntType = Tcl_GetObjType("int");
     if (gTclIntType == NULL) {

@@ -13,15 +13,25 @@
  * the other functions in the module.
  *
  * Parameters:
- * interp - Tcl interpreter in which to initialize.
+ * interp - Tcl interpreter for error messages. May be NULL.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *    the Tclh context associated with the interpreter is used after
+ *    initialization if necessary.
+ *
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Returns:
  * TCL_OK    - Library was successfully initialized.
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-TCLH_INLINE int Tclh_EncodingLibInit(Tcl_Interp *interp) {
-    return Tclh_BaseLibInit(interp);
+TCLH_INLINE int
+Tclh_EncodingLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
+{
+    if (tclhCtxP == NULL) {
+        return Tclh_LibInit(interp, NULL);
+    }
+    return TCL_OK; /* Must have been already initialized */
 }
 
 /* Function: Tclh_ExternalToUtf

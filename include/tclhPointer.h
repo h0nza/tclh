@@ -76,7 +76,7 @@ typedef Tcl_Obj *Tclh_PointerTypeTag;
  *             An error message is left in the interpreter result.
  */
 Tclh_ReturnCode Tclh_PointerLibInit(Tcl_Interp *interp,
-                                 Tclh_LibContext *tclhCtxP);
+                                    Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_PointerRegister
  * Registers a pointer value as being "valid".
@@ -611,6 +611,7 @@ static TclhPointerRegistry *TclhInitPointerRegistry(Tcl_Interp *interp);
 static int PointerTypeCompatible(TclhPointerRegistry *registryP,
                                  Tclh_PointerTypeTag tag,
                                  Tclh_PointerTypeTag expected);
+static void TclhPointerRecordFree(TclhPointerRecord *ptrRecP);
 
 static void
 TclhCleanupPointerRegistry(ClientData clientData, Tcl_Interp *interp)
@@ -656,7 +657,6 @@ Tclh_PointerLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
 
     if (tclhCtxP->pointerRegistryP)
         return TCL_OK; /* Already done */
-
 
     TclhPointerRegistry *registryP;
     registryP = (TclhPointerRegistry *)Tcl_Alloc(sizeof(*registryP));
@@ -800,7 +800,7 @@ TclhUnwrapAnyOfVA(Tcl_Interp *interp,
 
     while ((tag = va_arg(args, Tclh_PointerTypeTag)) != NULL) {
         /* Pass in registryP, not interp to avoid interp error message */
-        if (Tclh_PointerUnwrapTagged(NULL, registryP, objP, pvP, tag) == TCL_OK) {
+        if (Tclh_PointerUnwrapTagged(NULL, tclhCtxP, objP, pvP, tag) == TCL_OK) {
             if (tagP)
                 *tagP = tag;
             return TCL_OK;
@@ -1228,12 +1228,12 @@ PointerObjVerifyOrUnregisterAnyOf(Tcl_Interp *interp,
     void *pv = NULL;            /* Init to keep gcc happy */
     Tclh_PointerTypeTag tag = NULL;
 
-    tclResult = TclhUnwrapAnyOfVA(interp, registryP, objP, &pv, &tag, args);
+    tclResult = TclhUnwrapAnyOfVA(interp, tclhCtxP, objP, &pv, &tag, args);
     if (tclResult == TCL_OK) {
         if (unregister)
-            tclResult = Tclh_PointerUnregister(interp, registryP, pv, tag);
+            tclResult = Tclh_PointerUnregister(interp, tclhCtxP, pv, tag);
         else
-            tclResult = Tclh_PointerVerify(interp, registryP, pv, tag);
+            tclResult = Tclh_PointerVerify(interp, tclhCtxP, pv, tag);
         if (tclResult == TCL_OK && pointerP != NULL)
             *pointerP = pv;
     }

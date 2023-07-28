@@ -2,7 +2,7 @@
 #define TCLHHASH_H
 
 /*
- * Copyright (c) 2022, Ashok P. Nadkarni
+ * Copyright (c) 2022-2023, Ashok P. Nadkarni
  * All rights reserved.
  *
  * See the file LICENSE for license
@@ -15,14 +15,19 @@
  * the other functions in the module.
  *
  * Parameters:
- * interp - Tcl interpreter in which to initialize.
+ * interp - Tcl interpreter for error messages. May be NULL.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *    the Tclh context associated with the interpreter is used after
+ *    initialization if necessary.
+ *
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Returns:
  * TCL_OK    - Library was successfully initialized.
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-Tclh_ReturnCode Tclh_HashLibInit(Tcl_Interp *interp);
+Tclh_ReturnCode Tclh_HashLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_HashAdd
  * Adds an entry to a table of names
@@ -122,9 +127,11 @@ Tclh_HashLookup(Tcl_HashTable *htP, const void *key, ClientData *valueP);
  * Contains utilities dealing with Tcl hash tables.
  */
 Tclh_ReturnCode
-Tclh_HashLibInit(Tcl_Interp *ip)
+Tclh_HashLibInit(Tcl_Interp *ip, Tclh_LibContext *tclhCtxP)
 {
-    return Tclh_BaseLibInit(ip);
+    if (tclhCtxP == NULL)
+        return Tclh_LibInit(ip, NULL);
+    return TCL_OK;
 }
 
 Tclh_ReturnCode

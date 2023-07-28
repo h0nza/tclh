@@ -20,14 +20,17 @@
  * the other functions in the module.
  *
  * Parameters:
- * interp - Tcl interpreter in which to initialize.
+ * interp - Tcl interpreter for error messages. May be NULL.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *    the Tclh context associated with the interpreter is used after
+ *    initialization if necessary.
  *
  * Returns:
  * TCL_OK    - Library was successfully initialized.
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-int Tclh_NsLibInit(Tcl_Interp *interp);
+int Tclh_NsLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_NsIsGlobalNs
  * Returns true if passed namespace is the global namespace.
@@ -144,8 +147,11 @@ int Tclh_NsTailPos(const char *nameP);
 
 #ifdef TCLH_NAMESPACE_IMPL
 
-int Tclh_NsLibInit(Tcl_Interp *ip) {
-    return Tclh_BaseLibInit(ip);
+int Tclh_NsLibInit(Tcl_Interp *ip, Tclh_LibContext *tclhCtxP) {
+    if (tclhCtxP == NULL) {
+        return Tclh_LibInit(ip, NULL);
+    }
+    return TCL_OK; /* Must have been already initialized */
 }
 
 Tcl_Obj *

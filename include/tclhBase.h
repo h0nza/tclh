@@ -544,11 +544,11 @@ Tclh_ReturnCode Tclh_ErrorWindowsError(Tcl_Interp *interp,
 #ifdef TCLH_IMPL
 
 typedef struct TclhPointerRegistry TclhPointerRegistry;
-typedef struct TclhLibContext {
+struct Tclh_LibContext {
     Tcl_Interp *interp;
     TclhPointerRegistry *pointerRegistryP;
     Tcl_HashTable *atomRegistryP;
-} Tclh_LibContext;
+};
 
 #ifndef TCLH_LIB_CONTEXT_NAME
 /* This will be shared for all extensions if embedder has not defined it */
