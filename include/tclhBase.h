@@ -86,6 +86,13 @@
 #endif
 #endif
 
+/* Typedef: Tclh_LibContext
+ *
+ * This is a handle to a context internally maintained by the Tclh library
+ * and shared between modules.
+ */
+typedef struct Tclh_LibContext Tclh_LibContext;
+
 /* 
  * Typedef: Tclh_ReturnCode
  * Holds a Tcl return code defined in Tcl (e.g. TCL_OK, TCL_ERROR etc.)
@@ -113,7 +120,7 @@ typedef int Tclh_Bool;
 TCLH_INLINE char *
 Tclh_memdup(void *from, int len)
 {
-    void *to = ckalloc(len);
+    void *to = Tcl_Alloc(len);
     memcpy(to, from, len);
     return to;
 }
@@ -126,17 +133,49 @@ TCLH_INLINE Tcl_Size Tclh_strlen(const char *s) {
 
 TCLH_INLINE char *Tclh_strdup(const char *from) {
     Tcl_Size len = Tclh_strlen(from) + 1;
-    char *to = ckalloc(len);
+    char *to = Tcl_Alloc(len);
     memcpy(to, from, len);
     return to;
 }
 
 TCLH_INLINE char *Tclh_strdupn(const char *from, Tcl_Size len) {
-    char *to = ckalloc(len+1);
+    char *to = Tcl_Alloc(len+1);
     memcpy(to, from, len);
     to[len] = '\0';
     return to;
 }
+
+/* Section: Library initialization
+ *
+ * Each module in the library has a initialization function that needs to
+ * be called before invoking any of that module's functions. The Tclh
+ * context for the interpreter is automatically created at that time
+ * through <Tclh_LibInit> if it does not exist.
+ * 
+ * However, for efficiency reasons, it is recommended that <Tclh_LibInit> be
+ * explicitly called before any other module initialization and the
+ * context returned be passed to other module API's. This avoids a separate
+ * lookup to retrieve the context from the interpreter.
+ */
+
+/* Function: Tclh_LibInit 
+ *
+ * Parameters:
+ * interp - Tcl interpreter to initialize
+ * tclhCtxPP - location to store pointer to the Tclh context. May be NULL.
+ *
+ * Initializes and returns a Tclh context for the current interpreter. This
+ * can then be optionally passed to various functions to bypass an additional
+ * lookup to retrieve the context.
+ * 
+ * The context will be automatically freed when the interpreter is deleted.
+ *
+ * Returns:
+ * TCL_OK    - Library was successfully initialized.
+ * TCL_ERROR - Initialization failed. Library functions must not be called.
+ *             An error message is left in the interpreter result.
+*/
+Tclh_ReturnCode Tclh_LibInit(Tcl_Interp *interp, Tclh_LibContext **tclhCtxPP);
 
 /*
  * Error handling functions are also here because they are used by all modules.
@@ -504,14 +543,52 @@ Tclh_ReturnCode Tclh_ErrorWindowsError(Tcl_Interp *interp,
 
 #ifdef TCLH_IMPL
 
-Tclh_ReturnCode
-Tclh_BaseLibInit(Tcl_Interp *interp)
-{
-#if defined(USE_TCL_STUBS) && defined(TCLH_USE_TCL_TOMMATH)
-    if (Tcl_TomMath_InitStubs(interp, 0) == NULL) {
-        return TCL_ERROR;
-    }
+typedef struct TclhPointerRegistry TclhPointerRegistry;
+typedef struct TclhLibContext {
+    Tcl_Interp *interp;
+    TclhPointerRegistry *pointerRegistryP;
+    Tcl_HashTable *atomRegistryP;
+} Tclh_LibContext;
+
+#ifndef TCLH_LIB_CONTEXT_NAME
+/* This will be shared for all extensions if embedder has not defined it */
+# define TCLH_LIB_CONTEXT_NAME "TclhLibContext"
 #endif
+
+static void
+TclhCleanupLib(ClientData clientData, Tcl_Interp *interp)
+{
+    Tclh_LibContext *ctxP = (Tclh_LibContext *)clientData;
+    /*
+     * Note the CONTENT of ctxP is the responsibility of each module.
+     * We do not clean that up here.
+     */
+    Tcl_Free((void *)ctxP);
+}
+
+Tclh_ReturnCode
+Tclh_LibInit(Tcl_Interp *interp, Tclh_LibContext **tclhCtxPP)
+{
+    Tclh_LibContext *ctxP;
+    const char *const ctxName = TCLH_LIB_CONTEXT_NAME;
+    ctxP = (Tclh_LibContext *)Tcl_GetAssocData(interp, ctxName, NULL);
+
+    if (ctxP == NULL) {
+        ctxP = (Tclh_LibContext *)Tcl_Alloc(sizeof(*ctxP));
+        memset(ctxP, 0, sizeof(*ctxP));
+        ctxP->interp = interp;
+        Tcl_SetAssocData(interp, ctxName, TclhCleanupLib, ctxP);
+
+        /* Assumes Tcl stubs init already done but not tommath */
+#if defined(USE_TCL_STUBS) && defined(TCLH_USE_TCL_TOMMATH)
+        if (Tcl_TomMath_InitStubs(interp, 0) == NULL) {
+            Tcl_Free(ctxP);
+            return TCL_ERROR;
+        }
+#endif
+    }
+    if (tclhCtxPP)
+        *tclhCtxPP = ctxP;
     return TCL_OK;
 }
 

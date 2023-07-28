@@ -10,12 +10,6 @@
 
 #include "tclhBase.h"
 
-/* Typedef: Tclh_AtomRegistry
- *
- * See <Atoms>.
- */
-typedef Tcl_HashTable *Tclh_AtomRegistry;
-
 /* Section: Atoms
  *
  * Provides a facility to allow frequently used string values to be shared by
@@ -28,10 +22,14 @@ typedef Tcl_HashTable *Tclh_AtomRegistry;
  * the other functions in the module.
  *
  * Parameters:
- * interp - Tcl interpreter in which to initialize.
- * atomRegistryP - Location to store the atom table. May be NULL.
+ * interp - Tcl interpreter for error messages. May be NULL.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *    the Tclh context associated with the interpreter is used after
+ *    initialization if necessary.
  *
- * Any allocated resource are automatically freed up when the interpreter
+ * At least one of interp and tclhCtxP must be non-NULL.
+ * 
+ * Any allocated resources are automatically freed up when the interpreter
  * is deleted.
  *
  * Returns:
@@ -40,22 +38,24 @@ typedef Tcl_HashTable *Tclh_AtomRegistry;
  *             An error message is left in the interpreter result.
  */
 Tclh_ReturnCode Tclh_AtomLibInit(Tcl_Interp *interp,
-                                 Tclh_AtomRegistry *ptrRegP);
+                                 Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_GetAtom
  * Returns a Tcl_Obj wrapping the string value.
  *
  * Parameters:
- * interp  - Tcl interpreter in which the atom is to be registered.
- *           May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
- * str - the string value to wrap
+ * interp - Tcl interpreter for error messages. May be NULL.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *    the Tclh context associated with the interpreter is used after
+ *    initialization if necessary.
+ * str - the string value to atomize.
+ *
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * The returned Tcl_Obj will have a reference held to it by the registry.
  * Caller must not call Tcl_DecrRefCount on it without doing a Tcl_IncrRefCount
  * itself. Conversely, to prevent the returned Tcl_Obj from going away if
- * the registry is purged, calle should call Tcl_IncrRefCount on it if it
+ * the registry is purged, caller should call Tcl_IncrRefCount on it if it
  * intends to hold on to it. Finally, the Tcl_Obj may be shared so caller should
  * follow the usual rules for a shared object.
  *
@@ -63,7 +63,7 @@ Tclh_ReturnCode Tclh_AtomLibInit(Tcl_Interp *interp,
  * Pointer to a Tcl_Obj containing the value. The function will panic on memory
  * allocation failure.
  */
-Tcl_Obj *Tclh_AtomGet(Tcl_Interp *interp, Tclh_AtomRegistry registry, const char *str);
+Tcl_Obj *Tclh_AtomGet(Tcl_Interp *interp, Tclh_LibContext *ctx, const char *str);
 
 #ifdef TCLH_SHORTNAMES
 
@@ -82,39 +82,50 @@ Tcl_Obj *Tclh_AtomGet(Tcl_Interp *interp, Tclh_AtomRegistry registry, const char
 
 #ifdef TCLH_ATOM_IMPL
 
-typedef Tcl_HashTable TclhAtomRegistryInfo;
-static TclhAtomRegistryInfo *TclhInitAtomRegistry(Tcl_Interp *interp);
-
 Tclh_ReturnCode
-Tclh_AtomLibInit(Tcl_Interp *interp, Tclh_AtomRegistry *ptrRegP)
+Tclh_AtomLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
 {
-    int ret;
-    ret = Tclh_BaseLibInit(interp);
-    if (ret == TCL_OK) {
-        Tclh_AtomRegistry reg;
-        reg = TclhInitAtomRegistry(interp);
-        if (reg) {
-            if (ptrRegP)
-                *ptrRegP = reg;
-        }
-        else
-            ret = TCL_ERROR;
+    Tclh_ReturnCode ret;
+
+    if (tclhCtxP == NULL) {
+        if (interp == NULL)
+            return TCL_ERROR;
+        ret = Tclh_LibInit(interp, &tclhCtxP);
+        if (ret != TCL_OK)
+            return ret;
     }
-    return ret;
+
+    if (tclhCtxP->atomRegistryP)
+        return TCL_OK; /* Already done */
+
+    Tcl_HashTable *htP =
+        (Tcl_HashTable *)Tcl_Alloc(sizeof(*tclhCtxP->atomRegistryP));
+    Tcl_InitHashTable(htP, TCL_STRING_KEYS);
+    Tcl_CallWhenDeleted(interp, TclhCleanupAtomRegistry, htP);
+    tclhCtxP->atomRegistryP = htP;
+
+    return TCL_OK;
 }
 
-Tcl_Obj *Tclh_AtomGet(Tcl_Interp *interp, TclhAtomRegistryInfo *registryP, const char *str)
+Tcl_Obj *
+Tclh_AtomGet(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, const char *str)
 {
-    if (registryP == NULL) {
-        if (interp == NULL) {
-            return NULL; /* Either interp or registryP should have been
-                                 input */
-        }
-        registryP = TclhInitAtomRegistry(interp);
+    Tclh_ReturnCode ret;
+    if (tclhCtxP == NULL) {
+        if (interp == NULL)
+            return NULL;
+        ret = Tclh_LibInit(interp, &tclhCtxP);
+        if (ret != TCL_OK)
+            return NULL;
     }
+    if (tclhCtxP->atomRegistryP == NULL) {
+        return Tclh_ErrorGeneric(
+            interp, NULL, "Internal error: Tclh context not initialized.");
+    }
+    Tcl_HashTable *htP = tclhCtxP->atomRegistryP;
     Tcl_HashEntry *he;
     int new_entry;
-    he = Tcl_CreateHashEntry(registryP, str, &new_entry);
+    he = Tcl_CreateHashEntry(htP, str, &new_entry);
     if (new_entry) {
         Tcl_Obj *objP = Tcl_NewStringObj(str, -1);
         Tcl_IncrRefCount(objP);
@@ -128,7 +139,9 @@ Tcl_Obj *Tclh_AtomGet(Tcl_Interp *interp, TclhAtomRegistryInfo *registryP, const
 static void
 TclhCleanupAtomRegistry(ClientData clientData, Tcl_Interp *interp)
 {
-    Tcl_HashTable *registryP = (TclhAtomRegistryInfo *)clientData;
+    Tcl_HashTable *registryP = (Tcl_HashTable *)clientData;
+    TCLH_ASSERT(registryP);
+
     Tcl_HashEntry *he;
     Tcl_HashSearch hSearch;
 
@@ -139,26 +152,6 @@ TclhCleanupAtomRegistry(ClientData clientData, Tcl_Interp *interp)
     }
     Tcl_DeleteHashTable(registryP);
     Tcl_Free((void *)registryP);
-}
-
-#ifndef TCLH_ATOM_REGISTRY_NAME
-/* This will be shared for all extensions if embedder has not defined it */
-# define TCLH_ATOM_REGISTRY_NAME "TclhAtomTable"
-#endif
-
-static TclhAtomRegistryInfo *
-TclhInitAtomRegistry(Tcl_Interp *interp)
-{
-    TclhAtomRegistryInfo *registryP;
-    const char * const atomTableKey = TCLH_ATOM_REGISTRY_NAME;
-    registryP = Tcl_GetAssocData(interp, atomTableKey, NULL);
-    if (registryP == NULL) {
-        registryP = (TclhAtomRegistryInfo *) Tcl_Alloc(sizeof(*registryP));
-        Tcl_InitHashTable(registryP, TCL_STRING_KEYS);
-        Tcl_SetAssocData(
-            interp, atomTableKey, TclhCleanupAtomRegistry, registryP);
-    }
-    return registryP;
 }
 
 #endif /* TCLH_ATOM_IMPL */

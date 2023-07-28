@@ -12,12 +12,6 @@
 #include "tclhHash.h"
 #include <stdarg.h>
 
-/* Typedef: Tclh_PointerRegistry
- *
- * See <Registered Pointers>
- */
-typedef struct TclhPointerRegistryInfo *Tclh_PointerRegistry;
-
 /* Typedef: Tclh_PointerTypeTag
  *
  * See <Pointer Type Tags>.
@@ -46,14 +40,9 @@ typedef Tcl_Obj *Tclh_PointerTypeTag;
  * may match one of several types, the <Tclh_PointerVerifyAnyOf> and
  * <Tclh_PointerObjVerifyAnyOf> take a variable number of type tags.
  *
- * If pointer registration is not deemed necessary (dangerous), the functions
- * <Tclh_PointerWrap> and <Tclh_PointerUnwrapTagged> can be used to convert pointers
- * to and from Tcl_Obj values.
- *
- * The pointer registry is by default shared by all extensions and application
- * within an interpreter. If the embedded wants a private registry, the
- * preprocessor definition TCLH_POINTER_REGISTRY_NAME should be defined
- * (as a string) before inclusion of the header.
+ * If pointer registration is not deemed necessary (dangerous), the
+ * functions <Tclh_PointerWrap> and <Tclh_PointerUnwrapTagged> can be used
+ * to convert pointers to and from Tcl_Obj values.
  *
  * Section: Pointer Type Tags
  *
@@ -71,8 +60,12 @@ typedef Tcl_Obj *Tclh_PointerTypeTag;
  * the other functions in the module.
  *
  * Parameters:
- * interp - Tcl interpreter in which to initialize.
- * ptrRegP - Location to store reference to the pointer registry. May be NULL.
+ * interp - Tcl interpreter for error messages. May be NULL.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *    the Tclh context associated with the interpreter is used after
+ *    initialization if necessary.
+ *
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Any allocated resource are automatically freed up when the interpreter
  * is deleted.
@@ -83,7 +76,7 @@ typedef Tcl_Obj *Tclh_PointerTypeTag;
  *             An error message is left in the interpreter result.
  */
 Tclh_ReturnCode Tclh_PointerLibInit(Tcl_Interp *interp,
-                                    Tclh_PointerRegistry *ptrRegP);
+                                 Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_PointerRegister
  * Registers a pointer value as being "valid".
@@ -91,15 +84,15 @@ Tclh_ReturnCode Tclh_PointerLibInit(Tcl_Interp *interp,
  * Parameters:
  * interp  - Tcl interpreter in which the pointer is to be registered.
  *           May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * pointer - Pointer value to be registered.
  * tag     - Type tag for the pointer. Pass NULL or 0 for typeless pointers.
  * objPP   - if not NULL, a pointer to a new Tcl_Obj holding the pointer
  *           representation is stored here on success. The Tcl_Obj has
  *           a reference count of 0.
  *
- * At least one of interp and registryP must be non-NULL.
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * The validity of a registered pointer can then be tested by with
  * <Tclh_PointerVerify> and reversed by calling <Tclh_PointerUnregister>.
@@ -115,7 +108,7 @@ Tclh_ReturnCode Tclh_PointerLibInit(Tcl_Interp *interp,
  *             the interpreter.
  */
 Tclh_ReturnCode Tclh_PointerRegister(Tcl_Interp *interp,
-                                     Tclh_PointerRegistry registryP,
+                                     Tclh_LibContext *tclhCtxP,
                                      void *pointer,
                                      Tclh_PointerTypeTag tag,
                                      Tcl_Obj **objPP);
@@ -127,16 +120,15 @@ Tclh_ReturnCode Tclh_PointerRegister(Tcl_Interp *interp,
  * Parameters:
  * interp  - Tcl interpreter in which the pointer is to be registered.
  *           May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
- * pointer - Pointer value to be registered.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * pointer - Pointer value to be registered.
  * tag     - Type tag for the pointer. Pass NULL or 0 for typeless pointers.
  * objPP   - if not NULL, a pointer to a new Tcl_Obj holding the pointer
  *           representation is stored here on success. The Tcl_Obj has
  *           a reference count of 0.
  *
- * At least one of interp and registryP must be non-NULL.
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * The validity of a registered pointer can then be tested by with
  * <Tclh_PointerVerify> and reversed by calling <Tclh_PointerUnregister>.
@@ -153,7 +145,7 @@ Tclh_ReturnCode Tclh_PointerRegister(Tcl_Interp *interp,
  *             the interpreter.
  */
 Tclh_ReturnCode Tclh_PointerRegisterCounted(Tcl_Interp *interp,
-                                            Tclh_PointerRegistry registryP,
+                                            Tclh_LibContext *tclhCtxP,
                                             void *pointer,
                                             Tclh_PointerTypeTag tag,
                                             Tcl_Obj **objPP);
@@ -164,12 +156,12 @@ Tclh_ReturnCode Tclh_PointerRegisterCounted(Tcl_Interp *interp,
  * Parameters:
  * interp   - Tcl interpreter in which the pointer is to be unregistered.
  *           May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * pointer  - Pointer value to be unregistered.
  * expected_tag  - Type tag for the pointer.
  *
- * At least one of interp and registryP must be non-NULL.
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * The pointer may have been registered either via <Tclh_PointerRegister> or
  * <Tclh_PointerRegisterCounted>. In the former case, the pointer becomes
@@ -183,7 +175,7 @@ Tclh_ReturnCode Tclh_PointerRegisterCounted(Tcl_Interp *interp,
  *             different type. An error message is left in interp.
  */
 Tclh_ReturnCode Tclh_PointerUnregister(Tcl_Interp *interp,
-                                       Tclh_PointerRegistry registryP,
+                                       Tclh_LibContext *tclhCtxP,
                                        const void *pointer,
                                        Tclh_PointerTypeTag expected_tag);
 
@@ -193,13 +185,13 @@ Tclh_ReturnCode Tclh_PointerUnregister(Tcl_Interp *interp,
  *
  * interp   - Tcl interpreter in which the pointer is to be verified.
  *           May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * pointer  - Pointer value to be verified.
  * expected_tag - Type tag for the pointer. If *NULL*, the pointer registration
  *                is verified but its tag is not checked.
  *
- * At least one of interp and registryP must be non-NULL.
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Returns:
  * TCL_OK    - The pointer is registered with the same type tag.
@@ -207,7 +199,7 @@ Tclh_ReturnCode Tclh_PointerUnregister(Tcl_Interp *interp,
  *             is stored in interp.
  */
 Tclh_ReturnCode Tclh_PointerVerify(Tcl_Interp *interp,
-                                   Tclh_PointerRegistry registryP,
+                                   Tclh_LibContext *tclhCtxP,
                                    const void *voidP,
                                    Tclh_PointerTypeTag expected_tag);
 
@@ -236,15 +228,15 @@ Tclh_ReturnCode Tclh_PointerObjGetTag(Tcl_Interp *interp,
  * Parameters:
  * interp   - Tcl interpreter in which the pointer is to be unregistered.
  *            May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * objP     - Tcl_Obj containing a pointer value to be unregistered.
  * pointerP - If not NULL, the pointer value from objP is stored here
  *            on success.
  * tagPtr   - Type tag for the pointer. May be 0 or NULL if pointer
  *            type is not to be checked.
  *
- * At least one of interp and registryP must be non-NULL if tagPtr is not NULL.
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Returns:
  * TCL_OK    - The pointer was successfully unregistered.
@@ -252,7 +244,7 @@ Tclh_ReturnCode Tclh_PointerObjGetTag(Tcl_Interp *interp,
  *             different type. An error message is left in interp.
  */
 Tclh_ReturnCode Tclh_PointerObjUnregister(Tcl_Interp *interp,
-                                          Tclh_PointerRegistry registryP,
+                                          Tclh_LibContext *tclhCtxP,
                                           Tcl_Obj *objP,
                                           void **pointerP,
                                           Tclh_PointerTypeTag tag);
@@ -264,15 +256,15 @@ Tclh_ReturnCode Tclh_PointerObjUnregister(Tcl_Interp *interp,
  * Parameters:
  * interp   - Tcl interpreter in which the pointer is to be unregistered.
  *            May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * objP     - Tcl_Obj containing a pointer value to be unregistered.
  * pointerP - If not NULL, the pointer value from objP is stored here
  *            on success.
  * tag      - Type tag for the pointer. May be 0 or NULL if pointer
  *            type is not to be checked.
  *
- * At least one of interp and registryP must be non-NULL.
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Returns:
  * TCL_OK    - The pointer was successfully unregistered.
@@ -280,7 +272,7 @@ Tclh_ReturnCode Tclh_PointerObjUnregister(Tcl_Interp *interp,
  *             different type. An error message is left in interp.
  */
 Tclh_ReturnCode Tclh_PointerObjUnregisterAnyOf(Tcl_Interp *interp,
-                                               Tclh_PointerRegistry registryP,
+                                               Tclh_LibContext *tclhCtxP,
                                                Tcl_Obj *objP,
                                                void **pointerP,
                                                ... /* tag, ... , NULL */);
@@ -292,15 +284,15 @@ Tclh_ReturnCode Tclh_PointerObjUnregisterAnyOf(Tcl_Interp *interp,
  * Parameters:
  * interp   - Tcl interpreter in which the pointer is to be verified.
  *            May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * objP     - Tcl_Obj containing a pointer value to be verified.
  * pointerP - If not NULL, the pointer value from objP is stored here
  *            on success.
  * expected_tag - Type tag for the pointer. May be *NULL* if type is not
  *                to be checked.
  *
- * At least one of interp and registryP must be non-NULL.
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Returns:
  * TCL_OK    - The pointer was successfully verified.
@@ -308,7 +300,7 @@ Tclh_ReturnCode Tclh_PointerObjUnregisterAnyOf(Tcl_Interp *interp,
  *             different type. An error message is left in interp.
  */
 Tclh_ReturnCode Tclh_PointerObjVerify(Tcl_Interp *interp,
-                                      Tclh_PointerRegistry registryP,
+                                      Tclh_LibContext *tclhCtxP,
                                       Tcl_Obj *objP,
                                       void **pointerP,
                                       Tclh_PointerTypeTag expected_tag);
@@ -320,15 +312,15 @@ Tclh_ReturnCode Tclh_PointerObjVerify(Tcl_Interp *interp,
  * Parameters:
  * interp   - Tcl interpreter in which the pointer is to be verified.
  *            May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * objP     - Tcl_Obj containing a pointer value to be verified.
  * pointerP - If not NULL, the pointer value from objP is stored here
  *            on success.
  * ...      - Remaining arguments are type tags terminated by a NULL argument.
  *            The pointer must be one of these types.
  *
- * At least one of interp and registryP must be non-NULL.
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Returns:
  * TCL_OK    - The pointer was successfully verified.
@@ -337,7 +329,7 @@ Tclh_ReturnCode Tclh_PointerObjVerify(Tcl_Interp *interp,
  *             An error message is left in interp.
  */
 Tclh_ReturnCode Tclh_PointerObjVerifyAnyOf(Tcl_Interp *interp,
-                                           Tclh_PointerRegistry registryP,
+                                           Tclh_LibContext *tclhCtxP,
                                            Tcl_Obj *objP,
                                            void **pointerP,
                                            ... /* tag, tag, NULL */);
@@ -379,14 +371,16 @@ Tclh_PointerUnwrap(Tcl_Interp *interp, Tcl_Obj *objP, void **pointerP);
  *
  * Parameters:
  * interp - Interpreter in which to store error messages. May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * objP   - Tcl_Obj holding the wrapped pointer value.
  * pointerP - if not NULL, location to store unwrapped pointer.
  * expected_tag - Type tag for the pointer. May be *NULL* if type is not
  *                to be checked. If not NULL, at least one of interp or
  *                registryP must not be NULL.
  *
+ * At least one of interp and tclhCtxP must be non-NULL.
+ * 
  * The function does not check tags if the unwrapped pointer is NULL and 
  * is also untagged.
  *
@@ -395,7 +389,7 @@ Tclh_PointerUnwrap(Tcl_Interp *interp, Tcl_Obj *objP, void **pointerP);
  * TCL_ERROR - Failure, with interp containing error message.
  */
 Tclh_ReturnCode Tclh_PointerUnwrapTagged(Tcl_Interp *interp,
-                                         Tclh_PointerRegistry registryP,
+                                         Tclh_LibContext *tclhCtxP,
                                          Tcl_Obj *objP,
                                          void **pointerP,
                                          Tclh_PointerTypeTag expected_tag);
@@ -406,21 +400,21 @@ Tclh_ReturnCode Tclh_PointerUnwrapTagged(Tcl_Interp *interp,
  *
  * Parameters:
  * interp   - Interpreter in which to store error messages. May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * objP     - Tcl_Obj holding the wrapped pointer value.
  * pointerP - if not NULL, location to store unwrapped pointer.
  * ...      - List of type tags to match against the pointer. Terminated
  *            by a NULL argument.
  *
- * At least one of interp and registryP must be non-NULL.
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Returns:
  * TCL_OK    - Success, with the unwrapped pointer stored in *pointerP.
  * TCL_ERROR - Failure, with interp containing error message.
  */
 Tclh_ReturnCode Tclh_PointerUnwrapAnyOf(Tcl_Interp *interp,
-                                        Tclh_PointerRegistry registryP,
+                                        Tclh_LibContext *tclhCtxP,
                                         Tcl_Obj *objP,
                                         void **pointerP,
                                         ... /* tag, ..., NULL */);
@@ -430,17 +424,17 @@ Tclh_ReturnCode Tclh_PointerUnwrapAnyOf(Tcl_Interp *interp,
  *
  * Parameters:
  * interp - interpreter. May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * tag - Type tag to match. If NULL, pointers with all tags are returned.
  *
- * At least one of interp and registryP must be non-NULL.
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Returns:
  * Pointer to a Tcl_Obj with reference count 0.
  */
 Tcl_Obj *Tclh_PointerEnumerate(Tcl_Interp *interp,
-                               Tclh_PointerRegistry registryP,
+                               Tclh_LibContext *tclhCtxP,
                                Tclh_PointerTypeTag tag);
 
 /* Function: Tclh_PointerSubtagDefine
@@ -448,21 +442,21 @@ Tcl_Obj *Tclh_PointerEnumerate(Tcl_Interp *interp,
  *
  * Parameters:
  * interp - Interpreter. May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * subtagObj - the subtag
  * supertagObj - the super tag
  *
  * The subtag must not have already been registered as a subtag of some
  * other tag.
  *
- * At least one of interp and registryP must be non-NULL.
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Returns:
  * A Tcl result code.
  */
 Tclh_ReturnCode Tclh_PointerSubtagDefine(Tcl_Interp *interp,
-                                         Tclh_PointerRegistry registryP,
+                                         Tclh_LibContext *tclhCtxP,
                                          Tclh_PointerTypeTag subtagObj,
                                          Tclh_PointerTypeTag supertagObj);
 
@@ -471,17 +465,17 @@ Tclh_ReturnCode Tclh_PointerSubtagDefine(Tcl_Interp *interp,
  *
  * Parameters:
  * interp - Interpreter. May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * tagObj - the subtag
  *
- * At least one of interp and registryP must be non-NULL.
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Returns:
  * A Tcl result code.
  */
 Tclh_ReturnCode Tclh_PointerSubtagRemove(Tcl_Interp *interp,
-                                         Tclh_PointerRegistry registryP,
+                                         Tclh_LibContext *tclhCtxP,
                                          Tclh_PointerTypeTag tagObj);
 
 /* Function: Tclh_PointerSubtags
@@ -489,27 +483,29 @@ Tclh_ReturnCode Tclh_PointerSubtagRemove(Tcl_Interp *interp,
  *
  * Parameters:
  * interp - Tcl interpreter. May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  *
- * At least one of interp and registryP must be non-NULL.
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * Returns:
  * Dictionary of subtags or NULL on failure.
  */
-Tcl_Obj *Tclh_PointerSubtags(Tcl_Interp *interp, Tclh_PointerRegistry registryP);
+Tcl_Obj *Tclh_PointerSubtags(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_PointerCast
  * Changes the tag associated with a pointer
  *
  * Parameters:
  * interp   - Interpreter in which to store error messages. May be NULL.
- * registryP - pointer registry. If NULL, the registry associated with the
- *             interpreter is used.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
  * ptrObjP  - Tcl_Obj holding the wrapped pointer value.
  * newTagObj - new tag to which pointer is to be cast. May be NULL to cast
  *   to void pointer
  * castPtrObj - location to store wrapped pointer after casting
+ *
+ * At least one of interp and tclhCtxP must be non-NULL.
  *
  * If the passed wrapped pointer is NULL, a wrapped NULL pointer is returned.
  * If it is a safe pointer, it's tag is changed to the new tag in the pointer
@@ -523,7 +519,7 @@ Tcl_Obj *Tclh_PointerSubtags(Tcl_Interp *interp, Tclh_PointerRegistry registryP)
  * A Tcl return code.
  */
 Tclh_ReturnCode Tclh_PointerCast(Tcl_Interp *interp,
-                                 Tclh_PointerRegistry registryP,
+                                 Tclh_LibContext *tclhCtxP,
                                  Tcl_Obj *ptrObj,
                                  Tclh_PointerTypeTag newTagObj,
                                  Tcl_Obj **castPtrObj);
@@ -570,10 +566,10 @@ typedef struct TclhPointerRecord {
     int nRefs;                  /* Number of references to the pointer */
 } TclhPointerRecord;
 
-typedef struct TclhPointerRegistryInfo {
+typedef struct TclhPointerRegistry {
     Tcl_HashTable pointers;/* Table of registered pointers */
     Tcl_HashTable castables;/* Table of permitted casts subclass -> class */
-} TclhPointerRegistryInfo;
+} TclhPointerRegistry;
 
 
 /*
@@ -611,27 +607,65 @@ TCLH_INLINE void PointerTypeSet(Tcl_Obj *objP, Tclh_PointerTypeTag tag) {
 }
 static int PointerTypeSame(Tclh_PointerTypeTag pointer_tag,
                            Tclh_PointerTypeTag expected_tag);
-static TclhPointerRegistryInfo *TclhInitPointerRegistry(Tcl_Interp *interp);
-static int PointerTypeCompatible(TclhPointerRegistryInfo *registryP,
+static TclhPointerRegistry *TclhInitPointerRegistry(Tcl_Interp *interp);
+static int PointerTypeCompatible(TclhPointerRegistry *registryP,
                                  Tclh_PointerTypeTag tag,
                                  Tclh_PointerTypeTag expected);
 
-Tclh_ReturnCode
-Tclh_PointerLibInit(Tcl_Interp *interp, Tclh_PointerRegistry *ptrRegP)
+static void
+TclhCleanupPointerRegistry(ClientData clientData, Tcl_Interp *interp)
 {
-    int ret;
-    ret = Tclh_BaseLibInit(interp);
-    if (ret == TCL_OK) {
-        Tclh_PointerRegistry reg;
-        reg = TclhInitPointerRegistry(interp);
-        if (reg) {
-            if (ptrRegP)
-                *ptrRegP = reg;
-        }
-        else
-            ret = TCL_ERROR;
+    TclhPointerRegistry *registryP = (TclhPointerRegistry *)clientData;
+    TCLH_ASSERT(registryP);
+
+    Tcl_HashTable *hTblPtr;
+    Tcl_HashEntry *he;
+    Tcl_HashSearch hSearch;
+    hTblPtr = &registryP->pointers;
+    for (he = Tcl_FirstHashEntry(hTblPtr, &hSearch); he != NULL;
+         he = Tcl_NextHashEntry(&hSearch)) {
+        TclhPointerRecordFree((TclhPointerRecord *)Tcl_GetHashValue(he));
     }
-    return ret;
+    Tcl_DeleteHashTable(&registryP->pointers);
+
+    hTblPtr = &registryP->castables;
+    for (he = Tcl_FirstHashEntry(hTblPtr, &hSearch); he != NULL;
+         he = Tcl_NextHashEntry(&hSearch)) {
+        Tcl_Obj *superTagObj = (Tcl_Obj *)Tcl_GetHashValue(he);
+        /* Future proof in case we allow superTagObj as NULL */
+        if (superTagObj)
+            Tcl_DecrRefCount(superTagObj);
+    }
+    Tcl_DeleteHashTable(&registryP->castables);
+
+    Tcl_Free((void *)registryP);
+}
+
+Tclh_ReturnCode
+Tclh_PointerLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
+{
+    Tclh_ReturnCode ret;
+
+    if (tclhCtxP == NULL) {
+        if (interp == NULL)
+            return TCL_ERROR;
+        ret = Tclh_LibInit(interp, &tclhCtxP);
+        if (ret != TCL_OK)
+            return ret;
+    }
+
+    if (tclhCtxP->pointerRegistryP)
+        return TCL_OK; /* Already done */
+
+
+    TclhPointerRegistry *registryP;
+    registryP = (TclhPointerRegistry *)Tcl_Alloc(sizeof(*registryP));
+    Tcl_InitHashTable(&registryP->pointers, TCL_ONE_WORD_KEYS);
+    Tcl_InitHashTable(&registryP->castables, TCL_STRING_KEYS);
+    Tcl_CallWhenDeleted(interp, TclhCleanupPointerRegistry, registryP);
+    tclhCtxP->pointerRegistryP = registryP;
+
+    return TCL_OK;
 }
 
 static int
@@ -677,11 +711,12 @@ Tclh_PointerUnwrap(Tcl_Interp *interp, Tcl_Obj *objP, void **pvP)
 
 Tclh_ReturnCode
 Tclh_PointerUnwrapTagged(Tcl_Interp *interp,
-                         Tclh_PointerRegistry registryP,
+                         Tclh_LibContext *tclhCtxP,
                          Tcl_Obj *objP,
                          void **pvP,
                          Tclh_PointerTypeTag expectedTag)
 {
+    Tclh_ReturnCode ret;
     Tclh_PointerTypeTag tag;
     void *pv;
 
@@ -701,12 +736,20 @@ Tclh_PointerUnwrapTagged(Tcl_Interp *interp,
     *   - the unwrapped pointer is not NULL or its tag is not NULL
     */
     if (expectedTag && (pv || tag)) {
-        if (registryP == NULL) {
-            if (interp == NULL) {
-                return TCL_ERROR; /* Either interp or registryP should have been input */
-            }
-            registryP = TclhInitPointerRegistry(interp);
+        if (tclhCtxP == NULL) {
+            if (interp == NULL)
+                return TCL_ERROR;
+            ret = Tclh_LibInit(interp, &tclhCtxP);
+            if (ret != TCL_OK)
+                return ret;
         }
+        if (tclhCtxP->pointerRegistryP == NULL) {
+            return Tclh_ErrorGeneric(
+                interp, NULL, "Internal error: Tclh context not initialized.");
+        }
+
+        TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
+
         if (!PointerTypeCompatible(registryP, tag, expectedTag)) {
             return Tclh_ErrorWrongType(interp, objP, "Pointer type mismatch.");
         }
@@ -732,21 +775,28 @@ Tclh_PointerObjGetTag(Tcl_Interp *interp,
 
 static Tclh_ReturnCode
 TclhUnwrapAnyOfVA(Tcl_Interp *interp,
-                  Tclh_PointerRegistry registryP,
+                  Tclh_LibContext *tclhCtxP,
                   Tcl_Obj *objP,
                   void **pvP,
                   Tclh_PointerTypeTag *tagP,
                   va_list args)
 {
     Tclh_PointerTypeTag tag;
+    Tclh_ReturnCode ret;
 
-    if (registryP == NULL) {
-        if (interp == NULL) {
-            return TCL_ERROR; /* Either interp or registryP should have been
-                                 input */
-        }
-        registryP = TclhInitPointerRegistry(interp);
+    if (tclhCtxP == NULL) {
+        if (interp == NULL)
+            return TCL_ERROR;
+        ret = Tclh_LibInit(interp, &tclhCtxP);
+        if (ret != TCL_OK)
+            return ret;
     }
+    if (tclhCtxP->pointerRegistryP == NULL) {
+        return Tclh_ErrorGeneric(
+            interp, NULL, "Internal error: Tclh context not initialized.");
+    }
+
+    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
 
     while ((tag = va_arg(args, Tclh_PointerTypeTag)) != NULL) {
         /* Pass in registryP, not interp to avoid interp error message */
@@ -762,7 +812,7 @@ TclhUnwrapAnyOfVA(Tcl_Interp *interp,
 
 Tclh_ReturnCode
 Tclh_PointerUnwrapAnyOf(Tcl_Interp *interp,
-                        Tclh_PointerRegistry registryP,
+                        Tclh_LibContext *tclhCtxP,
                         Tcl_Obj *objP,
                         void **pvP,
                         ...)
@@ -771,7 +821,7 @@ Tclh_PointerUnwrapAnyOf(Tcl_Interp *interp,
     va_list args;
 
     va_start(args, pvP);
-    tclResult = TclhUnwrapAnyOfVA(interp, registryP, objP, pvP, NULL, args);
+    tclResult = TclhUnwrapAnyOfVA(interp, tclhCtxP, objP, pvP, NULL, args);
     va_end(args);
     return tclResult;
 }
@@ -913,62 +963,28 @@ TclhPointerRecordFree(TclhPointerRecord *ptrRecP)
     Tcl_Free((void *)ptrRecP);
 }
 
-static void
-TclhCleanupPointerRegistry(ClientData clientData, Tcl_Interp *interp)
-{
-    TclhPointerRegistryInfo *registryP = (TclhPointerRegistryInfo *)clientData;
-    Tcl_HashTable *hTblPtr;
-    Tcl_HashEntry *he;
-    Tcl_HashSearch hSearch;
-    hTblPtr = &registryP->pointers;
-    for (he = Tcl_FirstHashEntry(hTblPtr, &hSearch); he != NULL;
-         he = Tcl_NextHashEntry(&hSearch)) {
-        TclhPointerRecordFree((TclhPointerRecord *)Tcl_GetHashValue(he));
-    }
-    Tcl_DeleteHashTable(&registryP->pointers);
-
-    hTblPtr = &registryP->castables;
-    for (he = Tcl_FirstHashEntry(hTblPtr, &hSearch); he != NULL;
-         he = Tcl_NextHashEntry(&hSearch)) {
-        Tcl_Obj *superTagObj = (Tcl_Obj *)Tcl_GetHashValue(he);
-        /* Future proof in case we allow superTagObj as NULL */
-        if (superTagObj)
-            Tcl_DecrRefCount(superTagObj);
-    }
-    Tcl_DeleteHashTable(&registryP->castables);
-
-    Tcl_Free((void *)registryP);
-}
-
-#ifndef TCLH_POINTER_REGISTRY_NAME
-/* This will be shared for all extensions if embedder has not defined it */
-# define TCLH_POINTER_REGISTRY_NAME "TclhPointerTable"
-#endif
-
-static TclhPointerRegistryInfo *
-TclhInitPointerRegistry(Tcl_Interp *interp)
-{
-    TclhPointerRegistryInfo *registryP;
-    const char * const pointerTableKey = TCLH_POINTER_REGISTRY_NAME;
-    registryP = Tcl_GetAssocData(interp, pointerTableKey, NULL);
-    if (registryP == NULL) {
-        registryP = (TclhPointerRegistryInfo *) Tcl_Alloc(sizeof(*registryP));
-        Tcl_InitHashTable(&registryP->pointers, TCL_ONE_WORD_KEYS);
-        Tcl_InitHashTable(&registryP->castables, TCL_STRING_KEYS);
-        Tcl_SetAssocData(
-            interp, pointerTableKey, TclhCleanupPointerRegistry, registryP);
-    }
-    return registryP;
-}
-
 Tclh_ReturnCode
 TclhPointerRegister(Tcl_Interp *interp,
-                    Tclh_PointerRegistry registryP,
+                    Tclh_LibContext *tclhCtxP,
                     void *pointer,
                     Tclh_PointerTypeTag tag,
                     Tcl_Obj **objPP,
                     int counted)
 {
+    Tclh_ReturnCode ret;
+    if (tclhCtxP == NULL) {
+        if (interp == NULL)
+            return TCL_ERROR;
+        ret = Tclh_LibInit(interp, &tclhCtxP);
+        if (ret != TCL_OK)
+            return ret;
+    }
+    if (tclhCtxP->pointerRegistryP == NULL) {
+        return Tclh_ErrorGeneric(
+            interp, NULL, "Internal error: Tclh context not initialized.");
+    }
+
+    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
     Tcl_HashTable *hTblPtr;
     Tcl_HashEntry *he;
     int            newEntry;
@@ -977,11 +993,6 @@ TclhPointerRegister(Tcl_Interp *interp,
     if (pointer == NULL)
         return Tclh_ErrorInvalidValue(interp, NULL, "Attempt to register null pointer.");
 
-    if (registryP == NULL) {
-        if (interp == NULL)
-            return TCL_ERROR;
-        registryP = TclhInitPointerRegistry(interp);
-    }
     hTblPtr   = &registryP->pointers;
     he = Tcl_CreateHashEntry(hTblPtr, pointer, &newEntry);
 
@@ -1036,26 +1047,26 @@ TclhPointerRegister(Tcl_Interp *interp,
 
 Tclh_ReturnCode
 Tclh_PointerRegister(Tcl_Interp *interp,
-                     Tclh_PointerRegistry registryP,
+                     Tclh_LibContext *tclhCtxP,
                      void *pointer,
                      Tclh_PointerTypeTag tag,
                      Tcl_Obj **objPP)
 {
-    return TclhPointerRegister(interp, registryP, pointer, tag, objPP, 0);
+    return TclhPointerRegister(interp, tclhCtxP, pointer, tag, objPP, 0);
 }
 
 Tclh_ReturnCode
 Tclh_PointerRegisterCounted(Tcl_Interp *interp,
-                            Tclh_PointerRegistry registryP,
+                            Tclh_LibContext *tclhCtxP,
                             void *pointer,
                             Tclh_PointerTypeTag tag,
                             Tcl_Obj **objPP)
 {
-    return TclhPointerRegister(interp, registryP, pointer, tag, objPP, 1);
+    return TclhPointerRegister(interp, tclhCtxP, pointer, tag, objPP, 1);
 }
 
 static int
-PointerTypeCompatible(TclhPointerRegistryInfo *registryP,
+PointerTypeCompatible(TclhPointerRegistry *registryP,
                       Tclh_PointerTypeTag tag,
                       Tclh_PointerTypeTag expected)
 {
@@ -1088,18 +1099,24 @@ PointerTypeCompatible(TclhPointerRegistryInfo *registryP,
 
 static Tclh_ReturnCode
 PointerVerifyOrUnregister(Tcl_Interp *interp,
-                          Tclh_PointerRegistry registryP,
+                          Tclh_LibContext *tclhCtxP,
                           const void *pointer,
                           Tclh_PointerTypeTag tag,
                           int unregister)
 {
+    if (tclhCtxP == NULL) {
+        if (interp == NULL || Tclh_LibInit(interp, &tclhCtxP) != TCL_OK)
+            return TCL_ERROR;
+    }
+    if (tclhCtxP->pointerRegistryP == NULL) {
+        return Tclh_ErrorGeneric(
+            interp, NULL, "Internal error: Tclh context not initialized.");
+    }
+
+    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
+
     Tcl_HashEntry *he;
 
-    if (registryP == NULL) {
-        if (interp == NULL)
-            return TCL_ERROR;
-        registryP = TclhInitPointerRegistry(interp);
-    }
     he = Tcl_FindHashEntry(&registryP->pointers, pointer);
     if (he) {
         TclhPointerRecord *ptrRecP = Tcl_GetHashValue(he);
@@ -1122,35 +1139,40 @@ PointerVerifyOrUnregister(Tcl_Interp *interp,
 
 Tclh_ReturnCode
 Tclh_PointerUnregister(Tcl_Interp *interp,
-                       Tclh_PointerRegistry registryP,
+                       Tclh_LibContext *tclhCtxP,
                        const void *pointer,
                        Tclh_PointerTypeTag tag)
 {
-    return PointerVerifyOrUnregister(interp, registryP, pointer, tag, 1);
+    return PointerVerifyOrUnregister(interp, tclhCtxP, pointer, tag, 1);
 }
 
 Tcl_Obj *
 Tclh_PointerEnumerate(Tcl_Interp *interp,
-                      Tclh_PointerRegistry registryP,
+                      Tclh_LibContext *tclhCtxP,
                       Tclh_PointerTypeTag tag)
 {
+    if (tclhCtxP == NULL) {
+        if (interp == NULL || Tclh_LibInit(interp, &tclhCtxP) != TCL_OK)
+            return Tcl_NewObj();
+    }
+    if (tclhCtxP->pointerRegistryP == NULL) {
+            return Tcl_NewObj();
+    }
+    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
+
     Tcl_HashEntry *he;
     Tcl_HashSearch hSearch;
     Tcl_HashTable *hTblPtr;
     Tcl_Obj *resultObj = Tcl_NewListObj(0, NULL);
 
-    if (registryP == NULL) {
-        if (interp == NULL)
-            return resultObj;
-        registryP = TclhInitPointerRegistry(interp);
-    }
     hTblPtr   = &registryP->pointers;
     for (he = Tcl_FirstHashEntry(hTblPtr, &hSearch);
          he != NULL; he = Tcl_NextHashEntry(&hSearch)) {
         void *pv                   = Tcl_GetHashKey(hTblPtr, he);
         TclhPointerRecord *ptrRecP = Tcl_GetHashValue(he);
         if (PointerTypeSame(ptrRecP->tagObj, tag)) {
-            Tcl_ListObjAppendElement(NULL, resultObj, Tclh_PointerWrap(pv, ptrRecP->tagObj));
+            Tcl_ListObjAppendElement(
+                NULL, resultObj, Tclh_PointerWrap(pv, ptrRecP->tagObj));
         }
     }
     return resultObj;
@@ -1158,16 +1180,16 @@ Tclh_PointerEnumerate(Tcl_Interp *interp,
 
 Tclh_ReturnCode
 Tclh_PointerVerify(Tcl_Interp *interp,
-                   Tclh_PointerRegistry registryP,
+                   Tclh_LibContext *tclhCtxP,
                    const void *pointer,
                    Tclh_PointerTypeTag tag)
 {
-    return PointerVerifyOrUnregister(interp, registryP, pointer, tag, 0);
+    return PointerVerifyOrUnregister(interp, tclhCtxP, pointer, tag, 0);
 }
 
 Tclh_ReturnCode
 Tclh_PointerObjUnregister(Tcl_Interp *interp,
-                          Tclh_PointerRegistry registryP,
+                          Tclh_LibContext *tclhCtxP,
                           Tcl_Obj *objP,
                           void **pointerP,
                           Tclh_PointerTypeTag tag)
@@ -1175,10 +1197,10 @@ Tclh_PointerObjUnregister(Tcl_Interp *interp,
     void *pv = NULL;            /* Init to keep gcc happy */
     int   tclResult;
 
-    tclResult = Tclh_PointerUnwrapTagged(interp, registryP, objP, &pv, tag);
+    tclResult = Tclh_PointerUnwrapTagged(interp, tclhCtxP, objP, &pv, tag);
     if (tclResult == TCL_OK) {
         if (pv != NULL)
-            tclResult = Tclh_PointerUnregister(interp, registryP, pv, tag);
+            tclResult = Tclh_PointerUnregister(interp, tclhCtxP, pv, tag);
         if (tclResult == TCL_OK && pointerP != NULL)
             *pointerP = pv;
     }
@@ -1187,12 +1209,21 @@ Tclh_PointerObjUnregister(Tcl_Interp *interp,
 
 static Tclh_ReturnCode
 PointerObjVerifyOrUnregisterAnyOf(Tcl_Interp *interp,
-                                  Tclh_PointerRegistry registryP,
+                                  Tclh_LibContext *tclhCtxP,
                                   Tcl_Obj *objP,
                                   void **pointerP,
                                   int unregister,
                                   va_list args)
 {
+    if (tclhCtxP == NULL) {
+        if (interp == NULL || Tclh_LibInit(interp, &tclhCtxP) != TCL_OK)
+            return TCL_ERROR;
+    }
+    if (tclhCtxP->pointerRegistryP == NULL) {
+        return Tclh_ErrorGeneric(
+            interp, NULL, "Internal error: Tclh context not initialized.");
+    }
+    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
     int tclResult;
     void *pv = NULL;            /* Init to keep gcc happy */
     Tclh_PointerTypeTag tag = NULL;
@@ -1211,7 +1242,7 @@ PointerObjVerifyOrUnregisterAnyOf(Tcl_Interp *interp,
 
 Tclh_ReturnCode
 Tclh_PointerObjUnregisterAnyOf(Tcl_Interp *interp,
-                               Tclh_PointerRegistry registryP,
+                               Tclh_LibContext *tclhCtxP,
                                Tcl_Obj *objP,
                                void **pointerP,
                                ... /* tag, ... , NULL */)
@@ -1220,14 +1251,14 @@ Tclh_PointerObjUnregisterAnyOf(Tcl_Interp *interp,
     va_list args;
 
     va_start(args, pointerP);
-    tclResult = PointerObjVerifyOrUnregisterAnyOf(interp, registryP, objP, pointerP, 1, args);
+    tclResult = PointerObjVerifyOrUnregisterAnyOf(interp, tclhCtxP, objP, pointerP, 1, args);
     va_end(args);
     return tclResult;
 }
 
 Tclh_ReturnCode
 Tclh_PointerObjVerify(Tcl_Interp *interp,
-                      Tclh_PointerRegistry registryP,
+                      Tclh_LibContext *tclhCtxP,
                       Tcl_Obj *objP,
                       void **pointerP,
                       Tclh_PointerTypeTag tag)
@@ -1235,12 +1266,12 @@ Tclh_PointerObjVerify(Tcl_Interp *interp,
     void *pv = NULL;            /* Init to keep gcc happy */
     int   tclResult;
 
-    tclResult = Tclh_PointerUnwrapTagged(interp, registryP, objP, &pv, tag);
+    tclResult = Tclh_PointerUnwrapTagged(interp, tclhCtxP, objP, &pv, tag);
     if (tclResult == TCL_OK) {
         if (pv == NULL)
             tclResult = Tclh_ErrorInvalidValue(interp, NULL, "Pointer is NULL.");
         else {
-            tclResult = Tclh_PointerVerify(interp, registryP, pv, tag);
+            tclResult = Tclh_PointerVerify(interp, tclhCtxP, pv, tag);
             if (tclResult == TCL_OK) {
                 if (pointerP)
                     *pointerP = pv;
@@ -1252,7 +1283,7 @@ Tclh_PointerObjVerify(Tcl_Interp *interp,
 
 Tclh_ReturnCode
 Tclh_PointerObjVerifyAnyOf(Tcl_Interp *interp,
-                           Tclh_PointerRegistry registryP,
+                           Tclh_LibContext *tclhCtxP,
                            Tcl_Obj *objP,
                            void **pointerP,
                            ... /* tag, tag, NULL */)
@@ -1261,25 +1292,29 @@ Tclh_PointerObjVerifyAnyOf(Tcl_Interp *interp,
     va_list args;
 
     va_start(args, pointerP);
-    tclResult = PointerObjVerifyOrUnregisterAnyOf(interp, registryP, objP, pointerP, 0, args);
+    tclResult = PointerObjVerifyOrUnregisterAnyOf(
+        interp, tclhCtxP, objP, pointerP, 0, args);
     va_end(args);
     return tclResult;
 }
 
 Tclh_ReturnCode
 Tclh_PointerSubtagDefine(Tcl_Interp *interp,
-                         Tclh_PointerRegistry registryP,
+                         Tclh_LibContext *tclhCtxP,
                          Tclh_PointerTypeTag subtagObj,
                          Tclh_PointerTypeTag supertagObj)
 {
+    if (tclhCtxP == NULL) {
+        if (interp == NULL || Tclh_LibInit(interp, &tclhCtxP) != TCL_OK)
+            return TCL_ERROR;
+    }
+    if (tclhCtxP->pointerRegistryP == NULL) {
+        return Tclh_ErrorGeneric(
+            interp, NULL, "Internal error: Tclh context not initialized.");
+    }
+    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
     int tclResult;
     const char *subtag;
-
-    if (registryP == NULL) {
-        if (interp == NULL)
-            return TCL_ERROR;
-        registryP = TclhInitPointerRegistry(interp);
-    }
 
     if (supertagObj == NULL)
         return TCL_OK; /* void* always a supertype, no need to register */
@@ -1295,16 +1330,19 @@ Tclh_PointerSubtagDefine(Tcl_Interp *interp,
 
 Tclh_ReturnCode
 Tclh_PointerSubtagRemove(Tcl_Interp *interp,
-                         Tclh_PointerRegistry registryP,
+                         Tclh_LibContext *tclhCtxP,
                          Tclh_PointerTypeTag tagObj)
 {
-    Tcl_HashEntry *he;
-
-    if (registryP == NULL) {
-        if (interp == NULL)
+    if (tclhCtxP == NULL) {
+        if (interp == NULL || Tclh_LibInit(interp, &tclhCtxP) != TCL_OK)
             return TCL_ERROR;
-        registryP = TclhInitPointerRegistry(interp);
     }
+    if (tclhCtxP->pointerRegistryP == NULL) {
+        return Tclh_ErrorGeneric(
+            interp, NULL, "Internal error: Tclh context not initialized.");
+    }
+    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
+    Tcl_HashEntry *he;
 
     if (tagObj) {
         he = Tcl_FindHashEntry(&registryP->castables, Tcl_GetString(tagObj));
@@ -1319,19 +1357,24 @@ Tclh_PointerSubtagRemove(Tcl_Interp *interp,
 }
 
 Tcl_Obj *
-Tclh_PointerSubtags(Tcl_Interp *interp, Tclh_PointerRegistry registryP)
+Tclh_PointerSubtags(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
 {
     Tcl_Obj *objP;
+
+    objP = Tcl_NewListObj(0, NULL);
+    if (tclhCtxP == NULL) {
+        if (interp == NULL || Tclh_LibInit(interp, &tclhCtxP) != TCL_OK)
+            return objP;
+    }
+    if (tclhCtxP->pointerRegistryP == NULL) {
+        return objP;
+    }
+    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
+
     Tcl_HashEntry *heP;
     Tcl_HashTable *htP;
     Tcl_HashSearch hSearch;
 
-    objP = Tcl_NewListObj(0, NULL);
-    if (registryP == NULL) {
-        if (interp == NULL)
-            return objP;
-        registryP = TclhInitPointerRegistry(interp);
-    }
     htP  = &registryP->castables;
 
     for (heP = Tcl_FirstHashEntry(htP, &hSearch); heP != NULL;
@@ -1349,7 +1392,7 @@ Tclh_PointerSubtags(Tcl_Interp *interp, Tclh_PointerRegistry registryP)
 
 Tclh_ReturnCode
 Tclh_PointerCast(Tcl_Interp *interp,
-                 Tclh_PointerRegistry registryP,
+                 Tclh_LibContext *tclhCtxP,
                  Tcl_Obj *objP,
                  Tclh_PointerTypeTag newTag,
                  Tcl_Obj **castPtrObj)
@@ -1363,19 +1406,22 @@ Tclh_PointerCast(Tcl_Interp *interp,
     if (tclResult != TCL_OK)
         return tclResult;
 
-    tclResult = Tclh_PointerUnwrapTagged(interp, registryP, objP, &pv, NULL);
+    tclResult = Tclh_PointerUnwrapTagged(interp, tclhCtxP, objP, &pv, NULL);
     if (tclResult != TCL_OK)
         return tclResult;
 
-    /* Validate that if registered, it is registered correctly. */
-    if (registryP == NULL && interp != NULL) {
-        registryP = TclhInitPointerRegistry(interp);
-    }
     /*
+     * Validate that if registered, it is registered correctly.
      * Note it is NOT an error if registry and interp are both NULL.
      * It simply means it is not a registered pointer and the registration
      * does not need to be updated.
      */
+
+    TclhPointerRegistry *registryP = NULL;
+    if (tclhCtxP == NULL) {
+        if (interp && Tclh_LibInit(interp, &tclhCtxP) == TCL_OK)
+            registryP = tclhCtxP->pointerRegistryP;
+    }
     if (registryP) {
         TclhPointerRecord *ptrRecP = NULL;
         Tcl_HashEntry *he = Tcl_FindHashEntry(&registryP->pointers, pv);
