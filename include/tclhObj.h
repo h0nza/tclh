@@ -764,7 +764,6 @@ Tclh_ObjToULongLong(Tcl_Interp *interp, Tcl_Obj *objP, unsigned long long *ullP)
     int ret;
 
 #if TCLH_TCLAPI_VERSION >= 0x0807
-    /* TODO - currently disabled so as to get same error for 8.6 and 9.0 builds */
     Tcl_WideUInt uwide;
     ret = Tcl_GetWideUIntFromObj(interp, objP, &uwide);
     if (ret == TCL_OK)

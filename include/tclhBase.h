@@ -29,7 +29,7 @@
 #include "tclTomMath.h"
 #endif
 
-/* Common definitions included by all Tcl helper *implemenations* */
+/* Common definitions included by all Tcl helper *implementations* */
 
 #ifndef TCLH_INLINE
 #ifdef _MSC_VER
