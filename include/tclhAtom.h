@@ -82,6 +82,24 @@ Tcl_Obj *Tclh_AtomGet(Tcl_Interp *interp, Tclh_LibContext *ctx, const char *str)
 
 #ifdef TCLH_ATOM_IMPL
 
+static void
+TclhCleanupAtomRegistry(ClientData clientData, Tcl_Interp *interp)
+{
+    Tcl_HashTable *registryP = (Tcl_HashTable *)clientData;
+    TCLH_ASSERT(registryP);
+
+    Tcl_HashEntry *he;
+    Tcl_HashSearch hSearch;
+
+    for (he = Tcl_FirstHashEntry(registryP, &hSearch); he != NULL;
+         he = Tcl_NextHashEntry(&hSearch)) {
+        Tcl_Obj *objP = (Tcl_Obj *)Tcl_GetHashValue(he);
+        Tcl_DecrRefCount(objP);
+    }
+    Tcl_DeleteHashTable(registryP);
+    Tcl_Free((void *)registryP);
+}
+
 Tclh_ReturnCode
 Tclh_AtomLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
 {
@@ -119,8 +137,9 @@ Tclh_AtomGet(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, const char *str)
             return NULL;
     }
     if (tclhCtxP->atomRegistryP == NULL) {
-        return Tclh_ErrorGeneric(
+        Tclh_ErrorGeneric(
             interp, NULL, "Internal error: Tclh context not initialized.");
+        return NULL;
     }
     Tcl_HashTable *htP = tclhCtxP->atomRegistryP;
     Tcl_HashEntry *he;
@@ -134,24 +153,6 @@ Tclh_AtomGet(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, const char *str)
     } else {
         return (Tcl_Obj *) Tcl_GetHashValue(he);
     }
-}
-
-static void
-TclhCleanupAtomRegistry(ClientData clientData, Tcl_Interp *interp)
-{
-    Tcl_HashTable *registryP = (Tcl_HashTable *)clientData;
-    TCLH_ASSERT(registryP);
-
-    Tcl_HashEntry *he;
-    Tcl_HashSearch hSearch;
-
-    for (he = Tcl_FirstHashEntry(registryP, &hSearch); he != NULL;
-         he = Tcl_NextHashEntry(&hSearch)) {
-        Tcl_Obj *objP = (Tcl_Obj *)Tcl_GetHashValue(he);
-        Tcl_DecrRefCount(objP);
-    }
-    Tcl_DeleteHashTable(registryP);
-    Tcl_Free((void *)registryP);
 }
 
 #endif /* TCLH_ATOM_IMPL */
