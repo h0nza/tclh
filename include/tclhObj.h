@@ -553,7 +553,7 @@ Tclh_ObjLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
     return TCL_OK;
 }
 
-Tcl_ObjType *
+const Tcl_ObjType *
 Tclh_GetObjTypeDescriptor(const char *typename)
 {
     if (!strcmp(typename, "int")) {

@@ -607,7 +607,6 @@ TCLH_INLINE void PointerTypeSet(Tcl_Obj *objP, Tclh_PointerTypeTag tag) {
 }
 static int PointerTypeSame(Tclh_PointerTypeTag pointer_tag,
                            Tclh_PointerTypeTag expected_tag);
-static TclhPointerRegistry *TclhInitPointerRegistry(Tcl_Interp *interp);
 static int PointerTypeCompatible(TclhPointerRegistry *registryP,
                                  Tclh_PointerTypeTag tag,
                                  Tclh_PointerTypeTag expected);
@@ -795,8 +794,6 @@ TclhUnwrapAnyOfVA(Tcl_Interp *interp,
         return Tclh_ErrorGeneric(
             interp, NULL, "Internal error: Tclh context not initialized.");
     }
-
-    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
 
     while ((tag = va_arg(args, Tclh_PointerTypeTag)) != NULL) {
         /* Pass in registryP, not interp to avoid interp error message */
@@ -1223,7 +1220,6 @@ PointerObjVerifyOrUnregisterAnyOf(Tcl_Interp *interp,
         return Tclh_ErrorGeneric(
             interp, NULL, "Internal error: Tclh context not initialized.");
     }
-    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
     int tclResult;
     void *pv = NULL;            /* Init to keep gcc happy */
     Tclh_PointerTypeTag tag = NULL;
@@ -1418,7 +1414,9 @@ Tclh_PointerCast(Tcl_Interp *interp,
      */
 
     TclhPointerRegistry *registryP = NULL;
-    if (tclhCtxP == NULL) {
+    if (tclhCtxP)
+        registryP = tclhCtxP->pointerRegistryP;
+    else {
         if (interp && Tclh_LibInit(interp, &tclhCtxP) == TCL_OK)
             registryP = tclhCtxP->pointerRegistryP;
     }

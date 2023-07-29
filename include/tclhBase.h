@@ -582,7 +582,7 @@ Tclh_LibInit(Tcl_Interp *interp, Tclh_LibContext **tclhCtxPP)
         /* Assumes Tcl stubs init already done but not tommath */
 #if defined(USE_TCL_STUBS) && defined(TCLH_USE_TCL_TOMMATH)
         if (Tcl_TomMath_InitStubs(interp, 0) == NULL) {
-            Tcl_Free(ctxP);
+            Tcl_Free((char *)ctxP);
             return TCL_ERROR;
         }
 #endif
