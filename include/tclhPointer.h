@@ -749,7 +749,8 @@ Tclh_PointerUnwrapTagged(Tcl_Interp *interp,
 
         TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
 
-        if (!PointerTypeCompatible(registryP, tag, expectedTag)) {
+        if (tag != expectedTag /* Avoid cost of PointerTypeCompatible */
+            && !PointerTypeCompatible(registryP, tag, expectedTag)) {
             return Tclh_ErrorWrongType(interp, objP, "Pointer type mismatch.");
         }
     }

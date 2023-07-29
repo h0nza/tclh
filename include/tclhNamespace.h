@@ -98,6 +98,8 @@ Tclh_NsQualifyNameObj(Tcl_Interp *ip, Tcl_Obj *nameObj, const char *defaultNsP);
  * Parameters:
  * ip - interpreter. This may be NULL iff defaultNsP is not NULL.
  * nameP - name to be qualified
+ * nameLen - length of the name excluding nul terminator. If negative,
+ *    nameP must be nul terminated.
  * dsP - storage to use if necessary. This is initialized by the function
  *   and must be freed with Tcl_DStringFree on return in all cases.
  * defaultNsP - namespace to use to qualify if necessary.
@@ -112,6 +114,7 @@ Tclh_NsQualifyNameObj(Tcl_Interp *ip, Tcl_Obj *nameObj, const char *defaultNsP);
  */
 const char *Tclh_NsQualifyName(Tcl_Interp *ip,
                          const char *nameP,
+                         Tcl_Size nameLen,
                          Tcl_DString *dsP,
                          const char *defaultNsP);
 
@@ -181,14 +184,18 @@ Tclh_NsQualifyNameObj(Tcl_Interp *ip, Tcl_Obj *nameObj, const char *defaultNsP)
 }
 
 const char *
-Tclh_NsQualifyName(Tcl_Interp *ip, const char *nameP, Tcl_DString *dsP, const char *defaultNsP)
+Tclh_NsQualifyName(Tcl_Interp *ip, const char *nameP, Tcl_Size nameLen, Tcl_DString *dsP, const char *defaultNsP)
 {
     Tcl_Namespace *nsP;
 
     Tcl_DStringInit(dsP); /* Init BEFORE return below since caller will Reset it */
 
-    if (Tclh_NsIsFQN(nameP))
-        return nameP;
+    if (Tclh_NsIsFQN(nameP)) {
+        if (nameLen < 0)
+            return nameP;
+        /* Name is not null terminated. We need to make it so. */
+        return Tcl_DStringAppend(dsP, nameP, nameLen);
+    }
 
     /* Qualify with current namespace */
     if (defaultNsP == NULL) {
@@ -201,7 +208,7 @@ Tclh_NsQualifyName(Tcl_Interp *ip, const char *nameP, Tcl_DString *dsP, const ch
     /* Append '::' only if not global namespace else we'll get :::: */
     if (!Tclh_NsIsGlobalNs(defaultNsP))
         Tcl_DStringAppend(dsP, "::", 2);
-    Tcl_DStringAppend(dsP, nameP, -1);
+    Tcl_DStringAppend(dsP, nameP, nameLen);
     return Tcl_DStringValue(dsP);
 }
 
