@@ -396,7 +396,7 @@ Tclh_ReturnCode Tclh_ObjToDouble(Tcl_Interp *interp, Tcl_Obj *obj, double *ptr);
 TCLH_INLINE char *
 Tclh_ObjGetBytesByRef(Tcl_Interp *interp, Tcl_Obj *obj, Tcl_Size *lenPtr)
 {
-#ifdef HAVE_TCL87API
+#ifdef TCLH_TCL87API
     return (char *)Tcl_GetBytesFromObj(interp, obj, lenPtr);
 #else
     return (char *) Tcl_GetByteArrayFromObj(obj, lenPtr);

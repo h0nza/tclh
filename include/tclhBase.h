@@ -23,6 +23,7 @@
 #endif
 
 #if TCLH_TCLAPI_VERSION >= 0x0807
+#define TCLH_TCL87API
 #include "tommath.h"
 #else
 #define TCLH_USE_TCL_TOMMATH
