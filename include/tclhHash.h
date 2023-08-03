@@ -10,6 +10,11 @@
 
 #include "tclhBase.h"
 
+/* Section: Hash table utilities
+ *
+ * Contains utilities dealing with Tcl hash tables.
+ */
+
 /* Function: Tclh_HashLibInit
  * Must be called to initialize the Hash module before any of
  * the other functions in the module.
@@ -27,7 +32,14 @@
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-TCLH_LOCAL Tclh_ReturnCode Tclh_HashLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
+TCLH_INLINE Tclh_ReturnCode
+Tclh_HashLibInit(Tcl_Interp *ip, Tclh_LibContext *tclhCtxP)
+{
+    if (tclhCtxP == NULL)
+        return Tclh_LibInit(ip, NULL);
+    return TCL_OK;
+}
+
 
 /* Function: Tclh_HashAdd
  * Adds an entry to a table of names
@@ -121,18 +133,6 @@ Tclh_HashLookup(Tcl_HashTable *htP, const void *key, ClientData *valueP);
 #endif
 
 #ifdef TCLH_HASH_IMPL
-
-/* Section: Hash table utilities
- *
- * Contains utilities dealing with Tcl hash tables.
- */
-Tclh_ReturnCode
-Tclh_HashLibInit(Tcl_Interp *ip, Tclh_LibContext *tclhCtxP)
-{
-    if (tclhCtxP == NULL)
-        return Tclh_LibInit(ip, NULL);
-    return TCL_OK;
-}
 
 Tclh_ReturnCode
 Tclh_HashAdd(Tcl_Interp *ip,

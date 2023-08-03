@@ -491,7 +491,7 @@ TCLH_INLINE void Tclh_ObjArrayDecrRefs(int objc, Tcl_Obj * const *objv) {
  * Returns:
  * A non-NULL Tcl_Obj. Panics on memory failure.
  */
-#ifdef TCLH_TCL87API
+#ifndef TCLH_TCL87API
 Tcl_Obj * Tclh_ObjFromDString (Tcl_DString *dsP);
 #else
 TCLH_INLINE Tcl_Obj* Tclh_ObjFromDString(Tcl_DString *dsP) {
@@ -945,16 +945,16 @@ Tcl_Obj* Tclh_ObjFromDString(Tcl_DString *dsPtr)
 
     if (dsPtr->string == dsPtr->staticSpace) {
         if (dsPtr->length == 0) {
-            TclNewObj(result);
+            result = Tcl_NewObj();
         }
         else {
             /* Static buffer, so must copy. */
-            TclNewStringObj(result, dsPtr->string, dsPtr->length);
+            result = Tcl_NewStringObj(dsPtr->string, dsPtr->length);
         }
     }
     else {
         /* Dynamic buffer, so transfer ownership and reset. */
-        TclNewObj(result);
+        result = Tcl_NewObj();
         result->bytes  = dsPtr->string;
         result->length = dsPtr->length;
     }
