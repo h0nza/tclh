@@ -459,6 +459,24 @@ TCLH_INLINE void Tclh_ObjArrayDecrRefs(int objc, Tcl_Obj * const *objv) {
         Tcl_DecrRefCount(objv[i]);
 }
 
+/* Function: Tclh_ObjFromDString
+ * Returns a Tcl_Obj from a Tcl_DString content
+ *
+ * Parameters:
+ * dsPtr - pointer to a Tcl_DString
+ *
+ * The Tcl_DString is reinitialized to empty.
+ *
+ * Returns:
+ * A non-NULL Tcl_Obj. Panics on memory failure.
+ */
+Tcl_Obj * Tclh_ObjFromDString (Tcl_DString *dsP);
+#ifdef TCLH_TCL87API
+TCLH_INLINE Tcl_Obj* Tclh_ObjFromDString(Tcl_DString *dsP) {
+    return Tcl_DStringToObj(dsP);
+}
+#endif
+
 #ifdef TCLH_SHORTNAMES
 #define ObjClearPrt Tclh_ObjClearPtr
 #define ObjToRangedInt Tclh_ObjToRangedInt
@@ -481,6 +499,7 @@ TCLH_INLINE void Tclh_ObjArrayDecrRefs(int objc, Tcl_Obj * const *objv) {
 #define ObjFromAddress Tclh_ObjFromAddress
 #define ObjToAddress Tclh_ObjToAddress
 #define ObjGetBytesByRef Tclh_ObjGetBytesByRef
+#define ObjFromDString Tclh_ObjFromDString
 #endif
 
 /*
@@ -895,6 +914,40 @@ Tclh_ObjToAddress(Tcl_Interp *interp, Tcl_Obj *objP, void **pvP)
     }
     return ret;
 }
+
+#ifndef TCLH_TCL87API
+/* Copied from Tcl 8.7+ as polyfill for 8.6 */
+Tcl_Obj* Tclh_ObjFromDString(Tcl_DString *dsPtr) 
+{
+    Tcl_Obj *result;
+
+    if (dsPtr->string == dsPtr->staticSpace) {
+        if (dsPtr->length == 0) {
+            TclNewObj(result);
+        }
+        else {
+            /* Static buffer, so must copy. */
+            TclNewStringObj(result, dsPtr->string, dsPtr->length);
+        }
+    }
+    else {
+        /* Dynamic buffer, so transfer ownership and reset. */
+        TclNewObj(result);
+        result->bytes  = dsPtr->string;
+        result->length = dsPtr->length;
+    }
+
+    /* Re-establish the DString as empty with no buffer allocated. */
+
+    dsPtr->string = dsPtr->staticSpace;
+    dsPtr->spaceAvl = TCL_DSTRING_STATIC_SIZE;
+    dsPtr->length = 0;
+    dsPtr->staticSpace[0] = '\0';
+
+    return result;
+
+}
+#endif
 
 #endif /* TCLH_TCL_OBJ_IMPL */
 

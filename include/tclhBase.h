@@ -547,8 +547,11 @@ Tclh_ReturnCode Tclh_ErrorWindowsError(Tcl_Interp *interp,
 typedef struct TclhPointerRegistry TclhPointerRegistry;
 struct Tclh_LibContext {
     Tcl_Interp *interp;
-    TclhPointerRegistry *pointerRegistryP;
-    Tcl_HashTable *atomRegistryP;
+    TclhPointerRegistry *pointerRegistryP; /* PointerLib */
+    Tcl_HashTable *atomRegistryP;          /* AtomLib */
+#if defined(_WIN32) && TCL_UTF_MAX > 3
+    Tcl_Encoding encUTF16LE;               /* EncodingLib */
+#endif
 };
 
 #ifndef TCLH_LIB_CONTEXT_NAME

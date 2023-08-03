@@ -92,10 +92,76 @@ TCLH_INLINE int Tclh_UtfToExternal(Tcl_Interp *interp, Tcl_Encoding encoding,
 }
 #endif
 
+/* Function: Tclh_ExternalToUtfAlloc
+ * Transforms the input in the given encoding to Tcl's internal UTF-8
+ *
+ * Parameters:
+ * bufPP - location to store pointer to the allocated buffer. This must be
+ *    freed by calling Tcl_Free.
+ * numBytesOutP - location to store number of bytes copied to the buffer
+ *    not counting the terminating nul. May be NULL.
+ * 
+ * The other parameters are as for Tcl_ExternalToUtfDStringEx. See the Tcl
+ * documentation for details. This function differs in that it returns the
+ * output in an allocated buffer as opposed to the Tcl_DString structure.
+ */
+int Tclh_ExternalToUtfAlloc(Tcl_Interp *interp,
+                              Tcl_Encoding encoding,
+                              const char *src,
+                              Tcl_Size srcLen,
+                              int flags,
+                              char **bufPP,
+                              Tcl_Size *numBytesOutP,
+                              Tcl_Size *errorLocPtr);
+
+/* Function: Tclh_UtfToExternalAlloc
+ * Transforms Tcl's internal UTF-8 encoded data to the given encoding
+ *
+ * Parameters:
+ * bufPP - location to store pointer to the allocated buffer. This must be
+ *    freed by calling Tcl_Free.
+ * numBytesOutP - location to store number of bytes copied to the buffer
+ *    not counting the terminating nul bytes. May be NULL.
+ * 
+ * The other parameters are as for Tcl_UtfToExternalDStringEx. See the Tcl
+ * documentation for details. This function differs in that it returns the
+ * output in an allocated buffer as opposed to the Tcl_DString structure.
+ */
+int Tclh_UtfToExternalAlloc(Tcl_Interp *interp,
+                              Tcl_Encoding encoding,
+                              const char *src,
+                              Tcl_Size srcLen,
+                              int flags,
+                              char **bufPP,
+                              Tcl_Size *numBytesOutP,
+                              Tcl_Size *errorLocPtr);
+
+#ifdef _WIN32
+/* Function: Tclh_ObjFromWinChars
+ * Returns a Tcl_Obj containing a copy of the passed WCHAR string.
+ * 
+ * Parameters:
+ * tclhCtxP - Tclh context. May be NULL in which case a temporary Tcl_Encoding
+ *    context is used.
+ * wsP - pointer to a WCHAR string
+ * numChars - length of the string. If negative, the string must be nul terminated.
+ *
+ * If the Tcl version supports encoding profiles, the encoding is converted
+ * using the replace profile.
+ * 
+ * Returns:
+ * A non-NULL Tcl_Obj. Panics of failure (memory allocation).
+ */
+Tcl_Obj *
+Tclh_ObjFromWinChars(Tclh_LibContext *tclhCtxP, WCHAR *wsP, Tcl_Size numChars);
+
+#endif
 
 #ifdef TCLH_SHORTNAMES
 #define ExternalToUtf Tclh_ExternalToUtf
 #define UtfToExternal Tclh_UtfToExternal
+#define ExternalToUtfAlloc Tclh_ExternalToUtfAlloc
+#define ObjFromWinChars Tclh_ObjFromWinChars
 #endif
 
 /*
@@ -128,21 +194,29 @@ Tclh_ExternalToUtf(Tcl_Interp *interp,
     while (1) {
         int result;
         int srcChunkLen, srcChunkRead;
-	int dstChunkCapacity, dstChunkWrote, dstChunkChars;
+        int dstChunkCapacity, dstChunkWrote, dstChunkChars;
 
-	if (srcLen > INT_MAX) {
-	    srcChunkLen = INT_MAX;
+        if (srcLen > INT_MAX) {
+            srcChunkLen = INT_MAX;
             /* We are passing in only a fragment so ensure END is off */
             flags &= ~TCL_ENCODING_END;
         } else {
-	    srcChunkLen = srcLen;
-	    flags |= (origFlags & TCL_ENCODING_END); /* Last chunk if caller said so */
-	}
-	dstChunkCapacity = dstCapacity > INT_MAX ? INT_MAX : dstCapacity;
+            srcChunkLen = (int) srcLen;
+            flags |= (origFlags & TCL_ENCODING_END); /* Last chunk if caller said so */
+        }
+        dstChunkCapacity = dstCapacity > INT_MAX ? INT_MAX : (int) dstCapacity;
 
-	result = Tcl_ExternalToUtf(interp, encoding, src + srcRead,
-		srcChunkLen, flags, &state, dst + dstWrote, dstChunkCapacity,
-		&srcChunkRead, &dstChunkWrote, &dstChunkChars);
+        result = Tcl_ExternalToUtf(interp,
+                                   encoding,
+                                   src + srcRead,
+                                   srcChunkLen,
+                                   flags,
+                                   &state,
+                                   dst + dstWrote,
+                                   dstChunkCapacity,
+                                   &srcChunkRead,
+                                   &dstChunkWrote,
+                                   &dstChunkChars);
 
         srcRead += srcChunkRead;
         dstWrote += dstChunkWrote;
@@ -206,21 +280,31 @@ Tclh_UtfToExternal(Tcl_Interp *interp,
     while (1) {
         int result;
         int srcChunkLen, srcChunkRead;
-	int dstChunkCapacity, dstChunkWrote, dstChunkChars;
+        int dstChunkCapacity, dstChunkWrote, dstChunkChars;
 
-	if (srcLen > INT_MAX) {
-	    srcChunkLen = INT_MAX;
+        if (srcLen > INT_MAX) {
+            srcChunkLen = INT_MAX;
             /* We are passing in only a fragment so ensure END is off */
             flags &= ~TCL_ENCODING_END;
-        } else {
-	    srcChunkLen = srcLen;
-	    flags |= (origFlags & TCL_ENCODING_END); /* Last chunk if caller said so */
-	}
-	dstChunkCapacity = dstCapacity > INT_MAX ? INT_MAX : dstCapacity;
+        }
+        else {
+            srcChunkLen = (int) srcLen;
+            flags |= (origFlags
+                      & TCL_ENCODING_END); /* Last chunk if caller said so */
+        }
+        dstChunkCapacity = dstCapacity > INT_MAX ? INT_MAX : (int)dstCapacity;
 
-	result = Tcl_UtfToExternal(interp, encoding, src + srcRead,
-		srcChunkLen, flags, &state, dst + dstWrote, dstChunkCapacity,
-		&srcChunkRead, &dstChunkWrote, &dstChunkChars);
+        result = Tcl_UtfToExternal(interp,
+                                   encoding,
+                                   src + srcRead,
+                                   srcChunkLen,
+                                   flags,
+                                   &state,
+                                   dst + dstWrote,
+                                   dstChunkCapacity,
+                                   &srcChunkRead,
+                                   &dstChunkWrote,
+                                   &dstChunkChars);
 
         srcRead += srcChunkRead;
         dstWrote += dstChunkWrote;
@@ -259,6 +343,131 @@ Tclh_UtfToExternal(Tcl_Interp *interp,
         }
     }
 }
+
+int
+Tclh_ExternalToUtfAlloc(
+    Tcl_Interp *interp,
+    Tcl_Encoding encoding,
+    const char *src,
+    Tcl_Size srcLen,
+    int flags,
+    char **bufPP,
+    Tcl_Size *numBytesOutP,
+    Tcl_Size *errorLocPtr)
+{
+    Tcl_DString ds;
+    int ret;
+
+#ifdef TCLH_TCL87API
+    ret = Tcl_ExternalToUtfDStringEx(
+        interp, encoding, src, srcLen, flags, &ds, errorLocPtr);
+#else
+    ret = Tcl_ExternalToUtfDString(encoding, src, srcLen, &ds);
+    if (errorLocPtr)
+        *errorLocPtr = -1; /* Older API cannot have encoding errors */
+#endif
+    if (ret == TCL_ERROR)
+        return TCL_ERROR;
+
+    /*
+     * Being a bad citizen here, poking into DString internals but
+     * the current public Tcl API leaves us no choice.
+     */
+    if (numBytesOutP)
+        *numBytesOutP = ds.length;/* Not including terminator */
+    if (ds.string == ds.staticSpace) {
+        *bufPP = Tcl_Alloc(ds.length + 1);
+        memmove(*bufPP, ds.string, ds.length + 1);/* Includes terminating nul */
+    }
+    else {
+        /* Move over the allocated buffer to save a copy */
+        *bufPP = ds.string;
+    }
+    /* !!! ds fields are garbage at this point do NOT access!!!! */
+    return ret;
+}
+
+int
+Tclh_UtfToExternalAlloc(
+    Tcl_Interp *interp,
+    Tcl_Encoding encoding,
+    const char *src,
+    Tcl_Size srcLen,
+    int flags,
+    char **bufPP,
+    Tcl_Size *numBytesOutP,
+    Tcl_Size *errorLocPtr)
+{
+    Tcl_DString ds;
+    int ret;
+
+#ifdef TCLH_TCL87API
+    ret = Tcl_UtfToExternalDStringEx(
+        interp, encoding, src, srcLen, flags, &ds, errorLocPtr);
+#else
+    ret = Tcl_UtfToExternalDString(encoding, src, srcLen, &ds);
+    if (errorLocPtr)
+        *errorLocPtr = -1; /* Older API cannot have encoding errors */
+#endif
+    if (ret == TCL_ERROR)
+        return TCL_ERROR;
+
+    /*
+     * Being a bad citizen here, poking into DString internals but
+     * the current public Tcl API leaves us no choice.
+     */
+    if (numBytesOutP)
+        *numBytesOutP = ds.length;/* Not including terminator */
+    if (ds.string == ds.staticSpace) {
+        /* We do not know terminator size so allocate the whole buffer */
+        *bufPP = Tcl_Alloc(sizeof(ds.staticSpace));
+        memmove(*bufPP, ds.string, sizeof(ds.staticSpace));
+    }
+    else {
+        /* Move over the allocated buffer to save a copy */
+        *bufPP = ds.string;
+    }
+    /* !!! ds fields are garbage at this point do NOT access!!!! */
+    return ret;
+}
+
+#ifdef _WIN32
+Tcl_Obj *
+Tclh_ObjFromWinChars(Tclh_LibContext *tclhCtxP, WCHAR *wsP, Tcl_Size numChars)
+{
+#if TCL_UTF_MAX < 4
+    return Tcl_NewUnicodeObj(wsP, numChars);
+#else
+    Tcl_Encoding enc;
+
+    if (tclhCtxP == NULL || tclhCtxP->encUTF16LE == NULL) {
+        enc = Tcl_GetEncoding(NULL, "utf-16le");
+        if (tclhCtxP)
+            tclhCtxP->encUTF16LE = enc;
+    } else {
+        enc = tclhCtxP->encUTF16LE;
+    }
+    TCLH_ASSERT(enc);
+
+    /* 
+     * Note we do not use Tcl_Char16ToUtfDString because of its shortcomings
+     * with respect to encoding errors and overallocation of memory.
+     */
+    Tcl_DString ds;
+    Tclh_ReturnCode ret;
+    ret = Tcl_ExternalToUtfDStringEx(NULL,
+                                     enc,
+                                     (char *)wsP,
+                                     numChars * sizeof(WCHAR),
+                                     TCL_ENCODING_PROFILE_REPLACE,
+                                     &ds,
+                                     NULL);
+    TCLH_ASSERT(ret == TCL_OK); /* Should never fail for REPLACE profile */
+    return Tcl_DStringToObj(&ds);
+#endif
+}
+
+#endif
 
 #endif /* TCLH_IMPL */
 #endif /* TCLHENCODING_H */

@@ -15,7 +15,7 @@
  * Provides utility routines related to Tcl namespaces.
  */
 
-/* Function: Tclh_NamespaceLibInit
+/* Function: Tclh_NsLibInit
  * Must be called to initialize the Namespace module before any of
  * the other functions in the module.
  *
