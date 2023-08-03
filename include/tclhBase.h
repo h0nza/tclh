@@ -32,6 +32,42 @@
 
 /* Common definitions included by all Tcl helper *implementations* */
 
+/* See https://gcc.gnu.org/wiki/Visibility for these definitions */
+#if defined _WIN32 || defined __CYGWIN__
+  #define TCLH_HELPER_DLL_IMPORT __declspec(dllimport)
+  #define TCLH_HELPER_DLL_EXPORT __declspec(dllexport)
+  #define TCLH_HELPER_DLL_LOCAL
+#else
+  #if __GNUC__ >= 4
+    #define TCLH_HELPER_DLL_IMPORT __attribute__ ((visibility ("default")))
+    #define TCLH_HELPER_DLL_EXPORT __attribute__ ((visibility ("default")))
+    #define TCLH_HELPER_DLL_LOCAL  __attribute__ ((visibility ("hidden")))
+  #else
+    #define TCLH_HELPER_DLL_IMPORT
+    #define TCLH_HELPER_DLL_EXPORT
+    #define TCLH_HELPER_DLL_LOCAL
+  #endif
+#endif
+
+/*
+ * Now we use the generic helper definitions above to define TCLH_API and
+ * TCLH_LOCAL. TCLH_API is used for the exported API symbols from the shared
+ * library. It either DLL
+ * imports or DLL exports (or does nothing for static build) TCLH_LOCAL is
+ * used for non-api symbols.
+ */
+#ifdef STATIC_BUILD /* defined in Tcl configure for static build */
+# define TCLH_API
+# define TCLH_LOCAL
+#else
+  #ifdef TCLH_DLL_EXPORTS // defined if we are building the TCLH DLL (instead of using it)
+    #define TCLH_API TCLH_HELPER_DLL_EXPORT
+  #else
+    #define TCLH_API TCLH_HELPER_DLL_IMPORT
+  #endif // TCLH_DLL_EXPORTS
+  #define TCLH_LOCAL TCLH_HELPER_DLL_LOCAL
+#endif // FOX_DLL
+
 #ifndef TCLH_INLINE
 #ifdef _MSC_VER
 # define TCLH_INLINE __inline
@@ -176,7 +212,7 @@ TCLH_INLINE char *Tclh_strdupn(const char *from, Tcl_Size len) {
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
 */
-Tclh_ReturnCode Tclh_LibInit(Tcl_Interp *interp, Tclh_LibContext **tclhCtxPP);
+TCLH_LOCAL Tclh_ReturnCode Tclh_LibInit(Tcl_Interp *interp, Tclh_LibContext **tclhCtxPP);
 
 /*
  * Error handling functions are also here because they are used by all modules.
@@ -251,10 +287,11 @@ Tclh_ReturnCode Tclh_LibInit(Tcl_Interp *interp, Tclh_LibContext **tclhCtxPP);
  * TCL_ERROR - Always returns this value so caller can just pass on the return
  *             value from this function.
  */
-Tclh_ReturnCode Tclh_ErrorExists(Tcl_Interp *interp,
-                                 const char *type,
-                                 Tcl_Obj *searchObj,
-                                 const char *message);
+TCLH_LOCAL Tclh_ReturnCode
+Tclh_ErrorExists(Tcl_Interp *interp,
+                 const char *type,
+                 Tcl_Obj *searchObj,
+                 const char *message);
 
 /* Function: Tclh_ErrorGeneric
  * Reports a generic error.
@@ -277,7 +314,7 @@ Tclh_ReturnCode Tclh_ErrorExists(Tcl_Interp *interp,
  * TCL_ERROR - Always returns this value so caller can just pass on the return
  *             value from this function.
  */
-Tclh_ReturnCode
+TCLH_LOCAL Tclh_ReturnCode
 Tclh_ErrorGeneric(Tcl_Interp *interp, const char *code, const char *message);
 
 /* Function: Tclh_ErrorNotFoundStr
@@ -300,7 +337,7 @@ Tclh_ErrorGeneric(Tcl_Interp *interp, const char *code, const char *message);
  * TCL_ERROR - Always returns this value so caller can just pass on the return
  *             value from this function.
  */
-Tclh_ReturnCode Tclh_ErrorNotFoundStr(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorNotFoundStr(Tcl_Interp *interp,
                                       const char *type,
                                       const char *search,
                                       const char *message);
@@ -325,7 +362,7 @@ Tclh_ReturnCode Tclh_ErrorNotFoundStr(Tcl_Interp *interp,
  * TCL_ERROR - Always returns this value so caller can just pass on the return
  *             value from this function.
  */
-Tclh_ReturnCode Tclh_ErrorNotFound(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorNotFound(Tcl_Interp *interp,
                                    const char *type,
                                    Tcl_Obj *searchObj,
                                    const char *message);
@@ -350,7 +387,7 @@ Tclh_ReturnCode Tclh_ErrorNotFound(Tcl_Interp *interp,
  * TCL_ERROR - Always returns this value so caller can just pass on the return
  *             value from this function.
  */
-Tclh_ReturnCode Tclh_ErrorOperFailed(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorOperFailed(Tcl_Interp *interp,
                                      const char *type,
                                      Tcl_Obj *searchObj,
                                      const char *message);
@@ -372,7 +409,7 @@ Tclh_ReturnCode Tclh_ErrorOperFailed(Tcl_Interp *interp,
  * TCL_ERROR - Always returns this value so caller can just pass on the return
  *             value from this function.
  */
-Tclh_ReturnCode Tclh_ErrorInvalidValueStr(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorInvalidValueStr(Tcl_Interp *interp,
                                           const char *badValue,
                                           const char *message);
 
@@ -393,7 +430,7 @@ Tclh_ReturnCode Tclh_ErrorInvalidValueStr(Tcl_Interp *interp,
  * TCL_ERROR - Always returns this value so caller can just pass on the return
  *             value from this function.
  */
-Tclh_ReturnCode Tclh_ErrorInvalidValue(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorInvalidValue(Tcl_Interp *interp,
                                        Tcl_Obj *badArgObj,
                                        const char *message);
 
@@ -418,7 +455,7 @@ Tclh_ReturnCode Tclh_ErrorInvalidValue(Tcl_Interp *interp,
  * TCL_ERROR - Always returns this value so caller can just pass on the return
  *             value from this function.
  */
-Tclh_ReturnCode Tclh_ErrorNumArgs(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorNumArgs(Tcl_Interp *interp,
                                   int objc,
                                   Tcl_Obj *const objv[],
                                   const char *message);
@@ -441,7 +478,7 @@ Tclh_ReturnCode Tclh_ErrorNumArgs(Tcl_Interp *interp,
  * TCL_ERROR - Always returns this value so caller can just pass on the return
  *             value from this function.
  */
-Tclh_ReturnCode
+TCLH_LOCAL Tclh_ReturnCode
 Tclh_ErrorWrongType(Tcl_Interp *interp, Tcl_Obj *argObj, const char *message);
 
 /* Function: Tclh_ErrorAllocation
@@ -461,7 +498,7 @@ Tclh_ErrorWrongType(Tcl_Interp *interp, Tcl_Obj *argObj, const char *message);
  * TCL_ERROR - Always returns this value so caller can just pass on the return
  *             value from this function.
  */
-Tclh_ReturnCode
+TCLH_LOCAL Tclh_ReturnCode
 Tclh_ErrorAllocation(Tcl_Interp *interp, const char *type, const char *message);
 
 /* Function: Tclh_ErrorRange
@@ -477,7 +514,7 @@ Tclh_ErrorAllocation(Tcl_Interp *interp, const char *type, const char *message);
  * TCL_ERROR - Always returns this value so caller can just pass on the return
  *             value from this function.
  */
-Tclh_ReturnCode Tclh_ErrorRange(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorRange(Tcl_Interp *interp,
                                 Tcl_Obj *objP,
                                 Tcl_WideInt low,
                                 Tcl_WideInt high);
@@ -495,7 +532,7 @@ Tclh_ReturnCode Tclh_ErrorRange(Tcl_Interp *interp,
  * TCL_ERROR - Always returns this value so caller can just pass on the return
  *             value from this function.
  */
-Tclh_ReturnCode Tclh_ErrorEncodingFromUtf8(Tcl_Interp *ip,
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorEncodingFromUtf8(Tcl_Interp *ip,
                                            int encoding_status,
                                            const char *utf8,
                                            Tcl_Size utf8Len);
@@ -513,7 +550,7 @@ Tclh_ReturnCode Tclh_ErrorEncodingFromUtf8(Tcl_Interp *ip,
  * TCL_ERROR - Always returns this value so caller can just pass on the return
  *             value from this function.
  */
-Tclh_ReturnCode Tclh_ErrorWindowsError(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorWindowsError(Tcl_Interp *interp,
                                        unsigned int winerror,
                                        const char *message);
 #endif

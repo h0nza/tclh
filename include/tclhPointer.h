@@ -75,7 +75,7 @@ typedef Tcl_Obj *Tclh_PointerTypeTag;
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-Tclh_ReturnCode Tclh_PointerLibInit(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerLibInit(Tcl_Interp *interp,
                                     Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_PointerRegister
@@ -107,7 +107,7 @@ Tclh_ReturnCode Tclh_PointerLibInit(Tcl_Interp *interp,
  * TCL_ERROR - pointer registration failed. An error message is stored in
  *             the interpreter.
  */
-Tclh_ReturnCode Tclh_PointerRegister(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerRegister(Tcl_Interp *interp,
                                      Tclh_LibContext *tclhCtxP,
                                      void *pointer,
                                      Tclh_PointerTypeTag tag,
@@ -144,7 +144,7 @@ Tclh_ReturnCode Tclh_PointerRegister(Tcl_Interp *interp,
  * TCL_ERROR - pointer registration failed. An error message is stored in
  *             the interpreter.
  */
-Tclh_ReturnCode Tclh_PointerRegisterCounted(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerRegisterCounted(Tcl_Interp *interp,
                                             Tclh_LibContext *tclhCtxP,
                                             void *pointer,
                                             Tclh_PointerTypeTag tag,
@@ -174,7 +174,7 @@ Tclh_ReturnCode Tclh_PointerRegisterCounted(Tcl_Interp *interp,
  * TCL_ERROR - The pointer was not registered or was registered with a
  *             different type. An error message is left in interp.
  */
-Tclh_ReturnCode Tclh_PointerUnregister(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerUnregister(Tcl_Interp *interp,
                                        Tclh_LibContext *tclhCtxP,
                                        const void *pointer,
                                        Tclh_PointerTypeTag expected_tag);
@@ -198,7 +198,7 @@ Tclh_ReturnCode Tclh_PointerUnregister(Tcl_Interp *interp,
  * TCL_ERROR - Pointer is unregistered or a different type. An error message
  *             is stored in interp.
  */
-Tclh_ReturnCode Tclh_PointerVerify(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerVerify(Tcl_Interp *interp,
                                    Tclh_LibContext *tclhCtxP,
                                    const void *voidP,
                                    Tclh_PointerTypeTag expected_tag);
@@ -217,7 +217,7 @@ Tclh_ReturnCode Tclh_PointerVerify(Tcl_Interp *interp,
  * TCL_ERROR - objP is not a wrapped pointer. interp, if not NULL, will hold
  *             error message.
  */
-Tclh_ReturnCode Tclh_PointerObjGetTag(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerObjGetTag(Tcl_Interp *interp,
                                       Tcl_Obj *objP,
                                       Tclh_PointerTypeTag *tagPtr);
 
@@ -243,7 +243,7 @@ Tclh_ReturnCode Tclh_PointerObjGetTag(Tcl_Interp *interp,
  * TCL_ERROR - The pointer was not registered or was registered with a
  *             different type. An error message is left in interp.
  */
-Tclh_ReturnCode Tclh_PointerObjUnregister(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerObjUnregister(Tcl_Interp *interp,
                                           Tclh_LibContext *tclhCtxP,
                                           Tcl_Obj *objP,
                                           void **pointerP,
@@ -271,7 +271,7 @@ Tclh_ReturnCode Tclh_PointerObjUnregister(Tcl_Interp *interp,
  * TCL_ERROR - The pointer was not registered or was registered with a
  *             different type. An error message is left in interp.
  */
-Tclh_ReturnCode Tclh_PointerObjUnregisterAnyOf(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerObjUnregisterAnyOf(Tcl_Interp *interp,
                                                Tclh_LibContext *tclhCtxP,
                                                Tcl_Obj *objP,
                                                void **pointerP,
@@ -299,7 +299,7 @@ Tclh_ReturnCode Tclh_PointerObjUnregisterAnyOf(Tcl_Interp *interp,
  * TCL_ERROR - The pointer was not registered or was registered with a
  *             different type. An error message is left in interp.
  */
-Tclh_ReturnCode Tclh_PointerObjVerify(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerObjVerify(Tcl_Interp *interp,
                                       Tclh_LibContext *tclhCtxP,
                                       Tcl_Obj *objP,
                                       void **pointerP,
@@ -328,7 +328,7 @@ Tclh_ReturnCode Tclh_PointerObjVerify(Tcl_Interp *interp,
  *             type that is not one of the passed ones.
  *             An error message is left in interp.
  */
-Tclh_ReturnCode Tclh_PointerObjVerifyAnyOf(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerObjVerifyAnyOf(Tcl_Interp *interp,
                                            Tclh_LibContext *tclhCtxP,
                                            Tcl_Obj *objP,
                                            void **pointerP,
@@ -347,7 +347,7 @@ Tclh_ReturnCode Tclh_PointerObjVerifyAnyOf(Tcl_Interp *interp,
  * Returns:
  * Pointer to a Tcl_Obj with reference count 0.
  */
-Tcl_Obj *Tclh_PointerWrap(void *pointer, Tclh_PointerTypeTag tag);
+TCLH_LOCAL Tcl_Obj *Tclh_PointerWrap(void *pointer, Tclh_PointerTypeTag tag);
 
 /* Function: Tclh_PointerUnwrap
  * Unwraps a Tcl_Obj representing a pointer. No checks are made with respect
@@ -362,7 +362,7 @@ Tcl_Obj *Tclh_PointerWrap(void *pointer, Tclh_PointerTypeTag tag);
  * TCL_OK    - Success, with the unwrapped pointer stored in *pointerP.
  * TCL_ERROR - Failure, with interp containing error message.
  */
-Tclh_ReturnCode
+TCLH_LOCAL Tclh_ReturnCode
 Tclh_PointerUnwrap(Tcl_Interp *interp, Tcl_Obj *objP, void **pointerP);
 
 /* Function: Tclh_PointerUnwrapTagged
@@ -388,7 +388,7 @@ Tclh_PointerUnwrap(Tcl_Interp *interp, Tcl_Obj *objP, void **pointerP);
  * TCL_OK    - Success, with the unwrapped pointer stored in *pointerP.
  * TCL_ERROR - Failure, with interp containing error message.
  */
-Tclh_ReturnCode Tclh_PointerUnwrapTagged(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerUnwrapTagged(Tcl_Interp *interp,
                                          Tclh_LibContext *tclhCtxP,
                                          Tcl_Obj *objP,
                                          void **pointerP,
@@ -413,7 +413,7 @@ Tclh_ReturnCode Tclh_PointerUnwrapTagged(Tcl_Interp *interp,
  * TCL_OK    - Success, with the unwrapped pointer stored in *pointerP.
  * TCL_ERROR - Failure, with interp containing error message.
  */
-Tclh_ReturnCode Tclh_PointerUnwrapAnyOf(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerUnwrapAnyOf(Tcl_Interp *interp,
                                         Tclh_LibContext *tclhCtxP,
                                         Tcl_Obj *objP,
                                         void **pointerP,
@@ -433,7 +433,7 @@ Tclh_ReturnCode Tclh_PointerUnwrapAnyOf(Tcl_Interp *interp,
  * Returns:
  * Pointer to a Tcl_Obj with reference count 0.
  */
-Tcl_Obj *Tclh_PointerEnumerate(Tcl_Interp *interp,
+TCLH_LOCAL Tcl_Obj *Tclh_PointerEnumerate(Tcl_Interp *interp,
                                Tclh_LibContext *tclhCtxP,
                                Tclh_PointerTypeTag tag);
 
@@ -455,7 +455,7 @@ Tcl_Obj *Tclh_PointerEnumerate(Tcl_Interp *interp,
  * Returns:
  * A Tcl result code.
  */
-Tclh_ReturnCode Tclh_PointerSubtagDefine(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerSubtagDefine(Tcl_Interp *interp,
                                          Tclh_LibContext *tclhCtxP,
                                          Tclh_PointerTypeTag subtagObj,
                                          Tclh_PointerTypeTag supertagObj);
@@ -474,7 +474,7 @@ Tclh_ReturnCode Tclh_PointerSubtagDefine(Tcl_Interp *interp,
  * Returns:
  * A Tcl result code.
  */
-Tclh_ReturnCode Tclh_PointerSubtagRemove(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerSubtagRemove(Tcl_Interp *interp,
                                          Tclh_LibContext *tclhCtxP,
                                          Tclh_PointerTypeTag tagObj);
 
@@ -491,7 +491,8 @@ Tclh_ReturnCode Tclh_PointerSubtagRemove(Tcl_Interp *interp,
  * Returns:
  * Dictionary of subtags or NULL on failure.
  */
-Tcl_Obj *Tclh_PointerSubtags(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
+TCLH_LOCAL Tcl_Obj *Tclh_PointerSubtags(Tcl_Interp *interp,
+                                        Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_PointerCast
  * Changes the tag associated with a pointer
@@ -518,7 +519,7 @@ Tcl_Obj *Tclh_PointerSubtags(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
  * Returns:
  * A Tcl return code.
  */
-Tclh_ReturnCode Tclh_PointerCast(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerCast(Tcl_Interp *interp,
                                  Tclh_LibContext *tclhCtxP,
                                  Tcl_Obj *ptrObj,
                                  Tclh_PointerTypeTag newTagObj,

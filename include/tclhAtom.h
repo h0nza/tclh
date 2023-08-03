@@ -37,7 +37,7 @@
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-Tclh_ReturnCode Tclh_AtomLibInit(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_AtomLibInit(Tcl_Interp *interp,
                                  Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_GetAtom
@@ -63,7 +63,8 @@ Tclh_ReturnCode Tclh_AtomLibInit(Tcl_Interp *interp,
  * Pointer to a Tcl_Obj containing the value. The function will panic on memory
  * allocation failure.
  */
-Tcl_Obj *Tclh_AtomGet(Tcl_Interp *interp, Tclh_LibContext *ctx, const char *str);
+TCLH_LOCAL Tcl_Obj *
+Tclh_AtomGet(Tcl_Interp *interp, Tclh_LibContext *ctx, const char *str);
 
 #ifdef TCLH_SHORTNAMES
 

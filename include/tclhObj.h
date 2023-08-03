@@ -32,7 +32,22 @@
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-Tclh_ReturnCode Tclh_ObjLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
+TCLH_LOCAL Tclh_ReturnCode Tclh_ObjLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
+
+
+/* Function: Tclh_GetObjTypeDescriptor
+ * Returns the type descriptor for a Tcl_Obj internal type.
+ *
+ * Parameters:
+ * typename - name of the type
+ * 
+ * This a wrapper around Tcl_GetObjType which attempts to locate type
+ * descriptors for unregistered types as well.
+ *
+ * Returns:
+ * Pointer to a type descriptor or NULL if not found.
+ */
+TCLH_LOCAL const Tcl_ObjType *Tclh_GetObjTypeDescriptor(const char *typename);
 
 /* Function: Tclh_ObjClearPtr
  * Releases a pointer to a *Tcl_Obj* and clears it.
@@ -67,7 +82,7 @@ TCLH_INLINE void Tclh_ObjClearPtr(Tcl_Obj **objPP) {
  * passed Tcl_Obj contains a number in the specified range. Otherwise returns
  * TCL_ERROR with an error message in the interpreter.
  */
-Tclh_ReturnCode Tclh_ObjToRangedInt(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_ObjToRangedInt(Tcl_Interp *interp,
                                     Tcl_Obj *obj,
                                     Tcl_WideInt low,
                                     Tcl_WideInt high,
@@ -86,7 +101,7 @@ Tclh_ReturnCode Tclh_ObjToRangedInt(Tcl_Interp *interp,
  * passed Tcl_Obj contains an integer that fits in a C *char* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
-Tclh_ReturnCode
+TCLH_LOCAL Tclh_ReturnCode
 Tclh_ObjToChar(Tcl_Interp *interp, Tcl_Obj *obj, signed char *ptr);
 
 /* Function: Tclh_ObjToUChar
@@ -102,7 +117,7 @@ Tclh_ObjToChar(Tcl_Interp *interp, Tcl_Obj *obj, signed char *ptr);
  * passed Tcl_Obj contains an integer that fits in a C *unsigned char* type.
  * Otherwise, returns TCL_ERROR with an error message in the interpreter.
  */
-Tclh_ReturnCode
+TCLH_LOCAL Tclh_ReturnCode
 Tclh_ObjToUChar(Tcl_Interp *interp, Tcl_Obj *obj, unsigned char *ptr);
 
 /* Function: Tclh_ObjToShort
@@ -118,7 +133,7 @@ Tclh_ObjToUChar(Tcl_Interp *interp, Tcl_Obj *obj, unsigned char *ptr);
  * passed Tcl_Obj contains an integer that fits in a C *short* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
-Tclh_ReturnCode Tclh_ObjToShort(Tcl_Interp *interp, Tcl_Obj *obj, short *ptr);
+TCLH_LOCAL Tclh_ReturnCode Tclh_ObjToShort(Tcl_Interp *interp, Tcl_Obj *obj, short *ptr);
 
 /* Function: Tclh_ObjToUShort
  * Unwraps a Tcl_Obj into a C *unsigned short* value type.
@@ -133,7 +148,7 @@ Tclh_ReturnCode Tclh_ObjToShort(Tcl_Interp *interp, Tcl_Obj *obj, short *ptr);
  * if the passed Tcl_Obj contains an integer that fits in a C *unsigned short*
  * type. Otherwise returns TCL_ERROR with an error message in the interpreter.
  */
-Tclh_ReturnCode
+TCLH_LOCAL Tclh_ReturnCode
 Tclh_ObjToUShort(Tcl_Interp *interp, Tcl_Obj *obj, unsigned short *ptr);
 
 /* Function: Tclh_ObjToInt
@@ -149,7 +164,7 @@ Tclh_ObjToUShort(Tcl_Interp *interp, Tcl_Obj *obj, unsigned short *ptr);
  * passed Tcl_Obj contains an integer that fits in a C *int* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
-Tclh_ReturnCode Tclh_ObjToInt(Tcl_Interp *interp, Tcl_Obj *obj, int *ptr);
+TCLH_LOCAL Tclh_ReturnCode Tclh_ObjToInt(Tcl_Interp *interp, Tcl_Obj *obj, int *ptr);
 
 /* Function: Tclh_ObjFromInt
  * Returns a Tcl_Obj wrapping a *int*
@@ -211,7 +226,7 @@ TCLH_INLINE Tcl_Obj *Tclh_ObjFromSizeInt(Tcl_Size val) {
  * passed Tcl_Obj contains an integer that fits in a C *unsigned int* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
-Tclh_ReturnCode
+TCLH_LOCAL Tclh_ReturnCode
 Tclh_ObjToUInt(Tcl_Interp *interp, Tcl_Obj *obj, unsigned int *ptr);
 
 /* Function: Tclh_ObjToLong
@@ -227,7 +242,9 @@ Tclh_ObjToUInt(Tcl_Interp *interp, Tcl_Obj *obj, unsigned int *ptr);
  * passed Tcl_Obj contains an integer that fits in a C *long* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
-Tclh_ReturnCode Tclh_ObjToLong(Tcl_Interp *interp, Tcl_Obj *obj, long *ptr);
+TCLH_LOCAL Tclh_ReturnCode Tclh_ObjToLong(Tcl_Interp *interp,
+                                          Tcl_Obj *obj,
+                                          long *ptr);
 
 /* Function: Tclh_ObjFromLong
  * Returns a Tcl_Obj wrapping a *long*
@@ -255,7 +272,7 @@ TCLH_INLINE Tcl_Obj *Tclh_ObjFromLong(long longVal) {
  * passed Tcl_Obj contains an integer that fits in a C *long* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
-Tclh_ReturnCode
+TCLH_LOCAL Tclh_ReturnCode
 Tclh_ObjToULong(Tcl_Interp *interp, Tcl_Obj *obj, unsigned long *ptr);
 
 /* Function: Tclh_ObjFromULong
@@ -267,7 +284,7 @@ Tclh_ObjToULong(Tcl_Interp *interp, Tcl_Obj *obj, unsigned long *ptr);
  * Returns:
  * A pointer to a Tcl_Obj with a zero reference count.
  */
-Tcl_Obj *Tclh_ObjFromULong(unsigned long ull);
+TCLH_LOCAL Tcl_Obj *Tclh_ObjFromULong(unsigned long ull);
 
 /* Function: Tclh_ObjToWideInt
  * Unwraps a Tcl_Obj into a C *Tcl_WideInt* value type.
@@ -282,7 +299,7 @@ Tcl_Obj *Tclh_ObjFromULong(unsigned long ull);
  * passed Tcl_Obj contains an integer that fits in a C *Tcl_WideInt* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
-Tclh_ReturnCode
+TCLH_LOCAL Tclh_ReturnCode
 Tclh_ObjToWideInt(Tcl_Interp *interp, Tcl_Obj *obj, Tcl_WideInt *ptr);
 
 /* Function: Tclh_ObjFromWideInt
@@ -333,7 +350,7 @@ Tclh_ObjToLongLong(Tcl_Interp *interp, Tcl_Obj *objP, signed long long *llP)
  * passed Tcl_Obj contains an integer that fits in a C *long* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
-Tclh_ReturnCode
+TCLH_LOCAL Tclh_ReturnCode
 Tclh_ObjToULongLong(Tcl_Interp *interp, Tcl_Obj *obj, unsigned long long *ptr);
 
 /* Function: Tclh_ObjFromULongLong
@@ -345,7 +362,7 @@ Tclh_ObjToULongLong(Tcl_Interp *interp, Tcl_Obj *obj, unsigned long long *ptr);
  * Returns:
  * A pointer to a Tcl_Obj with a zero reference count.
  */
-Tcl_Obj *Tclh_ObjFromULongLong(unsigned long long ull);
+TCLH_LOCAL Tcl_Obj *Tclh_ObjFromULongLong(unsigned long long ull);
 
 
 /* Function: Tclh_ObjToFloat
@@ -361,7 +378,9 @@ Tcl_Obj *Tclh_ObjFromULongLong(unsigned long long ull);
  * passed Tcl_Obj contains an integer that fits in a C *float* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
-Tclh_ReturnCode Tclh_ObjToFloat(Tcl_Interp *interp, Tcl_Obj *obj, float *ptr);
+TCLH_LOCAL Tclh_ReturnCode Tclh_ObjToFloat(Tcl_Interp *interp,
+                                           Tcl_Obj *obj,
+                                           float *ptr);
 
 /* Function: Tclh_ObjToDouble
  * Unwraps a Tcl_Obj into a C *double* value type.
@@ -376,7 +395,9 @@ Tclh_ReturnCode Tclh_ObjToFloat(Tcl_Interp *interp, Tcl_Obj *obj, float *ptr);
  * passed Tcl_Obj contains an integer that fits in a C *double* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
-Tclh_ReturnCode Tclh_ObjToDouble(Tcl_Interp *interp, Tcl_Obj *obj, double *ptr);
+TCLH_LOCAL Tclh_ReturnCode Tclh_ObjToDouble(Tcl_Interp *interp,
+                                            Tcl_Obj *obj,
+                                            double *ptr);
 
 /* Function: Tclh_ObjGetBytesByRef
  * Retrieves a reference to the byte array in a Tcl_Obj.
@@ -416,7 +437,7 @@ Tclh_ObjGetBytesByRef(Tcl_Interp *interp, Tcl_Obj *obj, Tcl_Size *lenPtr)
  * Returns:
  * Pointer to the created Tcl_Obj.
  */
-Tcl_Obj *Tclh_ObjFromAddress (void *address);
+TCLH_LOCAL Tcl_Obj *Tclh_ObjFromAddress (void *address);
 
 /* Function: Tclh_ObjToAddress
  * Unwraps a Tcl_Obj into a memory address
@@ -431,7 +452,7 @@ Tcl_Obj *Tclh_ObjFromAddress (void *address);
  * pointed to by *ptr*. Otherwise returns TCL_ERROR with an error message in
  * the interpreter.
  */
-Tclh_ReturnCode Tclh_ObjToAddress(Tcl_Interp *interp, Tcl_Obj *obj, void **ptr);
+TCLH_LOCAL Tclh_ReturnCode Tclh_ObjToAddress(Tcl_Interp *interp, Tcl_Obj *obj, void **ptr);
 
 /* Function: Tclh_ObjArrayIncrRefs
  * Increments reference counts of all elements of a *Tcl_Obj** array
@@ -470,8 +491,9 @@ TCLH_INLINE void Tclh_ObjArrayDecrRefs(int objc, Tcl_Obj * const *objv) {
  * Returns:
  * A non-NULL Tcl_Obj. Panics on memory failure.
  */
-Tcl_Obj * Tclh_ObjFromDString (Tcl_DString *dsP);
 #ifdef TCLH_TCL87API
+Tcl_Obj * Tclh_ObjFromDString (Tcl_DString *dsP);
+#else
 TCLH_INLINE Tcl_Obj* Tclh_ObjFromDString(Tcl_DString *dsP) {
     return Tcl_DStringToObj(dsP);
 }
@@ -590,7 +612,7 @@ Tclh_GetObjTypeDescriptor(const char *typename)
     if (!strcmp(typename, "bignum")) {
         return gTclBignumType;
     }
-    return NULL;
+    return Tcl_GetObjType(typename);
 }
 
 Tclh_ReturnCode

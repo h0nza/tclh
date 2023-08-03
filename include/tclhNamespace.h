@@ -30,7 +30,8 @@
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-int Tclh_NsLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
+TCLH_LOCAL Tclh_ReturnCode Tclh_NsLibInit(Tcl_Interp *interp,
+                                          Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_NsIsGlobalNs
  * Returns true if passed namespace is the global namespace.
@@ -89,7 +90,7 @@ TCLH_INLINE int Tclh_NsIsFQN(const char *nsP)
  * Returns:
  * A *Tcl_Obj* containing the fully qualified name.
  */
-Tcl_Obj *
+TCLH_LOCAL Tcl_Obj *
 Tclh_NsQualifyNameObj(Tcl_Interp *ip, Tcl_Obj *nameObj, const char *defaultNsP);
 
 /* Function: Tclh_NsQualifyName
@@ -112,11 +113,11 @@ Tclh_NsQualifyNameObj(Tcl_Interp *ip, Tcl_Obj *nameObj, const char *defaultNsP);
  * A pointer to a fully qualified name. This may be either nameP or a
  * pointer into dsP. Caller should not assume eiter.
  */
-const char *Tclh_NsQualifyName(Tcl_Interp *ip,
-                         const char *nameP,
-                         Tcl_Size nameLen,
-                         Tcl_DString *dsP,
-                         const char *defaultNsP);
+TCLH_LOCAL const char *Tclh_NsQualifyName(Tcl_Interp *ip,
+                                          const char *nameP,
+                                          Tcl_Size nameLen,
+                                          Tcl_DString *dsP,
+                                          const char *defaultNsP);
 
 /* Function: Tclh_NsTailPos
  * Returns the index of the tail component in a name.
@@ -131,7 +132,7 @@ const char *Tclh_NsQualifyName(Tcl_Interp *ip,
  * Returns:
  * Index of the tail component.
  */
-int Tclh_NsTailPos(const char *nameP);
+TCLH_LOCAL int Tclh_NsTailPos(const char *nameP);
 
 #ifdef TCLH_SHORTNAMES
 

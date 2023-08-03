@@ -27,7 +27,7 @@
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-Tclh_ReturnCode Tclh_HashLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
+TCLH_LOCAL Tclh_ReturnCode Tclh_HashLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_HashAdd
  * Adds an entry to a table of names
@@ -43,7 +43,7 @@ Tclh_ReturnCode Tclh_HashLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
  * Returns:
  * TCL_OK on success, TCL_ERROR on failure.
  */
-Tclh_ReturnCode Tclh_HashAdd(Tcl_Interp *ip,
+TCLH_LOCAL Tclh_ReturnCode Tclh_HashAdd(Tcl_Interp *ip,
                              Tcl_HashTable *htP,
                              const void *key,
                              ClientData value);
@@ -64,7 +64,7 @@ Tclh_ReturnCode Tclh_HashAdd(Tcl_Interp *ip,
  * Returns:
  * 0 if the name already existed, and non-0 if a new entry was added.
  */
-Tclh_Bool Tclh_HashAddOrReplace(Tcl_HashTable *htP,
+TCLH_LOCAL Tclh_Bool Tclh_HashAddOrReplace(Tcl_HashTable *htP,
                                 const void *key,
                                 ClientData value,
                                 ClientData *oldValueP);
@@ -87,7 +87,7 @@ Tclh_Bool Tclh_HashAddOrReplace(Tcl_HashTable *htP,
  * Returns *1* if the iteration terminated normally with all entries processed,
  * and *0* if it was terminated by the callback returning *0*.
  */
-Tclh_Bool
+TCLH_LOCAL Tclh_Bool
 Tclh_HashIterate(Tcl_HashTable *htP,
                  int (*fnP)(Tcl_HashTable *, Tcl_HashEntry *, ClientData),
                  ClientData fnData);
@@ -104,7 +104,7 @@ Tclh_HashIterate(Tcl_HashTable *htP,
  * Returns:
  * *TCL_OK* if found, *TCL_ERROR* on failure.
  */
-Tclh_ReturnCode
+TCLH_LOCAL Tclh_ReturnCode
 Tclh_HashLookup(Tcl_HashTable *htP, const void *key, ClientData *valueP);
 
 #ifdef TCLH_SHORTNAMES
