@@ -247,6 +247,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_LibInit(Tcl_Interp *interp, Tclh_LibContext **tc
         if (result != TCL_OK)                   \
             return result;                      \
     } while (0)
+#define TCLH_CHECK TCLH_CHECK_RESULT
 
 /* Macro: TCLH_CHECK_NARGS
  * Checks the number of arguments passed as the objv[] array to a function

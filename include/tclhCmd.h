@@ -124,10 +124,34 @@ Tclh_SubCommandLookup(Tcl_Interp *ip,
                       Tcl_Obj *const objv[],
                       int *indexP);
 
+Tcl_ObjCmdProc Tclh_ParseargsProc;
+
+/* Function: Tclh_MakeParseargsCmd
+ * Creates a Tcl script level command to parse arguments
+ *
+ * Parameters:
+ * ip - the interpreter in which the command is to be created
+ * name - the name of the command. If not fully qualified, the command is
+ *   created in *defaultNs*
+ * defaultNs - the namespace for the command if *name* is not fully qualified.
+ *   If NULL, the current namespace is used.
+ *
+ * Returns:
+ * Returns a token representing the created command on success and NULL on failure.
+ */
+TCLH_INLINE Tcl_Command Tclh_MakeParseargsCmd(Tcl_Interp *ip, const char *name, const char *defaultNs)
+{
+    Tcl_DString ds;
+    Tcl_Command cmdToken;
+    cmdToken = Tcl_CreateObjCommand(ip, Tclh_NsQualifyName(ip, name, -1, &ds, defaultNs), Tclh_ParseargsProc, NULL, NULL);
+    Tcl_DStringFree(&ds); /* Irrespective of success/failure */
+    return cmdToken;
+}
 
 #ifdef TCLH_SHORTNAMES
 #define SubCommandNameToIndex Tclh_SubCommandNameToIndex
 #define SubCommandLookup      Tclh_SubCommandLookup
+#define MakeParseargsCmd      Tclh_MakeParseargsCmd
 #endif
 
 #ifdef TCLH_IMPL
