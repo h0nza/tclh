@@ -8,6 +8,7 @@
 #include "tclhEncoding.h"
 #include <assert.h>
 
+#if TCL_MAJOR_VERSION >= 9
 int
 Tclh_ExternalToUtf(Tcl_Interp *interp,
                    Tcl_Encoding encoding,
@@ -99,7 +100,9 @@ Tclh_ExternalToUtf(Tcl_Interp *interp,
         }
     }
 }
+#endif
 
+#if TCL_MAJOR_VERSION >= 9
 int
 Tclh_UtfToExternal(Tcl_Interp *interp,
                    Tcl_Encoding encoding,
@@ -193,6 +196,7 @@ Tclh_UtfToExternal(Tcl_Interp *interp,
         }
     }
 }
+#endif
 
 int
 Tclh_ExternalToUtfAlloc(
@@ -211,17 +215,19 @@ Tclh_ExternalToUtfAlloc(
 #ifdef TCLH_TCL87API
     ret = Tcl_ExternalToUtfDStringEx(
         interp, encoding, src, srcLen, flags, &ds, errorLocPtr);
-#else
-    ret = Tcl_ExternalToUtfDString(encoding, src, srcLen, &ds);
-    if (errorLocPtr)
-        *errorLocPtr = -1; /* Older API cannot have encoding errors */
-#endif
     if (ret == TCL_ERROR) {
         *bufPP = NULL;
         if (numBytesOutP)
             *numBytesOutP = 0;
         return TCL_ERROR;
     }
+#else
+    /* Older API cannot have encoding errors */
+    Tcl_ExternalToUtfDString(encoding, src, srcLen, &ds);
+    if (errorLocPtr)
+        *errorLocPtr = -1;
+    ret = TCL_OK;
+#endif
     /* ret is one of TCL_OK or TCL_CONVERT_* codes */
 
     /*
@@ -259,18 +265,19 @@ Tclh_UtfToExternalAlloc(
 #ifdef TCLH_TCL87API
     ret = Tcl_UtfToExternalDStringEx(
         interp, encoding, src, srcLen, flags, &ds, errorLocPtr);
-#else
-    ret = Tcl_UtfToExternalDString(encoding, src, srcLen, &ds);
-    if (errorLocPtr)
-        *errorLocPtr = -1; /* Older API cannot have encoding errors */
-#endif
-
     if (ret == TCL_ERROR) {
         *bufPP = NULL;
         if (numBytesOutP)
             *numBytesOutP = 0;
         return TCL_ERROR;
     }
+#else
+    /* Older API cannot have encoding errors */
+    Tcl_UtfToExternalDString(encoding, src, srcLen, &ds);
+    if (errorLocPtr)
+        *errorLocPtr = -1;
+    ret = TCL_OK;
+#endif
 
     /* ret is one of TCL_OK or TCL_CONVERT_* codes */
 
@@ -347,7 +354,7 @@ Tclh_UtfToExternalLifo(Tcl_Interp *ip,
                     *numBytesOutP = 0;
                 if (errorLocPtr) {
                     /* Do not take into account current srcLatestRead */
-                    *errorLocPtr = (srcP - fromP);
+                    *errorLocPtr = (Tcl_Size) (srcP - fromP);
                 }
             } else {
                 /* Tack on 4 nuls as we don't know how many nuls encoding uses */
@@ -362,7 +369,8 @@ Tclh_UtfToExternalLifo(Tcl_Interp *ip,
                     if (status == TCL_OK)
                         *errorLocPtr = -1;
                     else
-                        *errorLocPtr = (srcP - fromP) + srcLatestRead;
+                        *errorLocPtr =
+                            (Tcl_Size)((srcP - fromP) + srcLatestRead);
                 }
                 *outPP = dstP;
             }

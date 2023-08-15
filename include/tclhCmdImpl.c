@@ -349,7 +349,7 @@ Tclh_ReturnCode Tclh_ParseargsProc(
     ClientData clientData,
     Tcl_Interp *interp,
     int objc,
-    Tcl_Obj *CONST objv[])
+    Tcl_Obj *const objv[])
 {
     Tcl_Obj    *argvObj;
     Tcl_Size    argc, iarg;
@@ -401,8 +401,8 @@ Tclh_ReturnCode Tclh_ParseargsProc(
     nopts = objv[2]->internalRep.ptrAndLongRep.value;
 
     if (nopts > PARSEARGS_STATIC) {
-        valuesP = Tcl_Alloc(nopts * sizeof(*valuesP));
-        retP = Tcl_Alloc(2*nopts*sizeof(Tcl_Obj*));
+        valuesP = (Tcl_Obj **) Tcl_Alloc(nopts * sizeof(*valuesP));
+        retP = (Tcl_Obj **)Tcl_Alloc(2*nopts*sizeof(*retP));
     } else {
         valuesP = values;
         retP = retObjs;
@@ -738,9 +738,9 @@ Tclh_ReturnCode Tclh_ParseargsProc(
 vamoose: /* status should be TCL_OK or TCL_ERROR */
     
     if (valuesP && valuesP != values)
-        Tcl_Free(valuesP);
+        Tcl_Free((char *) valuesP);
     if (retP && retP != retObjs)
-        Tcl_Free(retP);
+        Tcl_Free((char *)retP);
     if (zeroObj)
         Tcl_DecrRefCount(zeroObj);
     if (oneObj)

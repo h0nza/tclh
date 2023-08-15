@@ -61,12 +61,8 @@ TCLH_INLINE int Tclh_ExternalToUtf(Tcl_Interp *interp, Tcl_Encoding encoding,
                        Tcl_EncodingState *statePtr, char *dst,
                        Tcl_Size dstLen, Tcl_Size *srcReadPtr,
                        Tcl_Size *dstWrotePtr, Tcl_Size *dstCharsPtr) {
-    return Tclh_ExternalToUtf(Tcl_Interp * interp,
-                              Tcl_Encoding encoding, const char *src,
-                              Tcl_Size srcLen, int flags,
-                              Tcl_EncodingState *statePtr, char *dst,
-                              Tcl_Size dstLen, int *srcReadPtr,
-                              int *dstWrotePtr, int *dstCharsPtr);
+    return Tcl_ExternalToUtf(interp, encoding, src, srcLen, flags, statePtr,
+                             dst, dstLen, srcReadPtr, dstWrotePtr, dstCharsPtr);
 }
 #endif
 
@@ -90,12 +86,8 @@ TCLH_INLINE int Tclh_UtfToExternal(Tcl_Interp *interp, Tcl_Encoding encoding,
                        Tcl_EncodingState *statePtr, char *dst,
                        Tcl_Size dstLen, Tcl_Size *srcReadPtr,
                        Tcl_Size *dstWrotePtr, Tcl_Size *dstCharsPtr) {
-    return Tclh_UtfToExternal(Tcl_Interp * interp,
-                              Tcl_Encoding encoding, const char *src,
-                              Tcl_Size srcLen, int flags,
-                              Tcl_EncodingState *statePtr, char *dst,
-                              Tcl_Size dstLen, int *srcReadPtr,
-                              int *dstWrotePtr, int *dstCharsPtr);
+    return Tcl_UtfToExternal(interp, encoding, src, srcLen, flags, statePtr,
+                              dst, dstLen, srcReadPtr, dstWrotePtr, dstCharsPtr);
 }
 #endif
 
