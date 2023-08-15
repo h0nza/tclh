@@ -143,6 +143,35 @@ int Tclh_UtfToExternalAlloc(Tcl_Interp *interp,
                               Tcl_Size *numBytesOutP,
                               Tcl_Size *errorLocPtr);
 
+#ifdef TCLH_LIFO_E_SUCCESS /* Only define if Lifo module is available */
+
+/* Function: Tclh_UtfToExternalLifo
+ * Transforms Tcl's internal UTF-8 encoded data to the given encoding
+ *
+ * Parameters:
+ * memlifoP - The Tclh_MemLifo from which to allocate memory.
+ * numBytesOutP - location to store number of bytes copied to the buffer
+ *    not counting the terminating nul bytes. May be NULL.
+ * 
+ * The other parameters are as for Tcl_UtfToExternalDStringEx. See the Tcl
+ * documentation for details. This function differs in that it returns the
+ * output in memory allocated from a Tclh_Lifo.
+ * 
+ * The *tclhLifo.h* file must be included before *tclhEncoding.h* 
+ * for this function to be present.
+ */
+int Tclh_UtfToExternalLifo(Tcl_Interp *ip,
+                           Tcl_Encoding encoding,
+                           const char *fromP,
+                           Tcl_Size fromLen,
+                           int flags,
+                           Tclh_Lifo *memlifoP,
+                           char **outPP,
+                           Tcl_Size *numBytesOutP,
+                           Tcl_Size *errorLocPtr);
+
+#endif
+
 #ifdef _WIN32
 /* Function: Tclh_ObjFromWinChars
  * Returns a Tcl_Obj containing a copy of the passed WCHAR string.
