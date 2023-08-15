@@ -61,12 +61,8 @@ TCLH_INLINE int Tclh_ExternalToUtf(Tcl_Interp *interp, Tcl_Encoding encoding,
                        Tcl_EncodingState *statePtr, char *dst,
                        Tcl_Size dstLen, Tcl_Size *srcReadPtr,
                        Tcl_Size *dstWrotePtr, Tcl_Size *dstCharsPtr) {
-    return Tclh_ExternalToUtf(Tcl_Interp * interp,
-                              Tcl_Encoding encoding, const char *src,
-                              Tcl_Size srcLen, int flags,
-                              Tcl_EncodingState *statePtr, char *dst,
-                              Tcl_Size dstLen, int *srcReadPtr,
-                              int *dstWrotePtr, int *dstCharsPtr);
+    return Tcl_ExternalToUtf(interp, encoding, src, srcLen, flags, statePtr,
+                             dst, dstLen, srcReadPtr, dstWrotePtr, dstCharsPtr);
 }
 #endif
 
@@ -90,12 +86,8 @@ TCLH_INLINE int Tclh_UtfToExternal(Tcl_Interp *interp, Tcl_Encoding encoding,
                        Tcl_EncodingState *statePtr, char *dst,
                        Tcl_Size dstLen, Tcl_Size *srcReadPtr,
                        Tcl_Size *dstWrotePtr, Tcl_Size *dstCharsPtr) {
-    return Tclh_UtfToExternal(Tcl_Interp * interp,
-                              Tcl_Encoding encoding, const char *src,
-                              Tcl_Size srcLen, int flags,
-                              Tcl_EncodingState *statePtr, char *dst,
-                              Tcl_Size dstLen, int *srcReadPtr,
-                              int *dstWrotePtr, int *dstCharsPtr);
+    return Tcl_UtfToExternal(interp, encoding, src, srcLen, flags, statePtr,
+                              dst, dstLen, srcReadPtr, dstWrotePtr, dstCharsPtr);
 }
 #endif
 
@@ -142,6 +134,35 @@ int Tclh_UtfToExternalAlloc(Tcl_Interp *interp,
                               char **bufPP,
                               Tcl_Size *numBytesOutP,
                               Tcl_Size *errorLocPtr);
+
+#ifdef TCLH_LIFO_E_SUCCESS /* Only define if Lifo module is available */
+
+/* Function: Tclh_UtfToExternalLifo
+ * Transforms Tcl's internal UTF-8 encoded data to the given encoding
+ *
+ * Parameters:
+ * memlifoP - The Tclh_MemLifo from which to allocate memory.
+ * numBytesOutP - location to store number of bytes copied to the buffer
+ *    not counting the terminating nul bytes. May be NULL.
+ * 
+ * The other parameters are as for Tcl_UtfToExternalDStringEx. See the Tcl
+ * documentation for details. This function differs in that it returns the
+ * output in memory allocated from a Tclh_Lifo.
+ * 
+ * The *tclhLifo.h* file must be included before *tclhEncoding.h* 
+ * for this function to be present.
+ */
+int Tclh_UtfToExternalLifo(Tcl_Interp *ip,
+                           Tcl_Encoding encoding,
+                           const char *fromP,
+                           Tcl_Size fromLen,
+                           int flags,
+                           Tclh_Lifo *memlifoP,
+                           char **outPP,
+                           Tcl_Size *numBytesOutP,
+                           Tcl_Size *errorLocPtr);
+
+#endif
 
 #ifdef _WIN32
 /* Function: Tclh_ObjFromWinChars
