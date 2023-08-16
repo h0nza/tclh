@@ -32,14 +32,8 @@
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-TCLH_INLINE int
-Tclh_EncodingLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
-{
-    if (tclhCtxP == NULL) {
-        return Tclh_LibInit(interp, NULL);
-    }
-    return TCL_OK; /* Must have been already initialized */
-}
+Tclh_ReturnCode
+Tclh_EncodingLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_ExternalToUtf
  * Wrapper around Tcl_ExternalToUtf to allow lengths > INT_MAX.
@@ -189,6 +183,7 @@ Tclh_ObjFromWinChars(Tclh_LibContext *tclhCtxP, WCHAR *wsP, Tcl_Size numChars);
 #define ExternalToUtf Tclh_ExternalToUtf
 #define UtfToExternal Tclh_UtfToExternal
 #define ExternalToUtfAlloc Tclh_ExternalToUtfAlloc
+#define UtfToExternalLifo Tclh_UtfToExternalLifo
 #define ObjFromWinChars Tclh_ObjFromWinChars
 #endif
 

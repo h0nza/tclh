@@ -8,6 +8,15 @@
 #include "tclhEncoding.h"
 #include <assert.h>
 
+Tclh_ReturnCode
+Tclh_EncodingLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
+{
+    if (tclhCtxP == NULL) {
+        return Tclh_LibInit(interp, NULL);
+    }
+    return TCL_OK; /* Must have been already initialized */
+}
+
 #if TCL_MAJOR_VERSION >= 9
 int
 Tclh_ExternalToUtf(Tcl_Interp *interp,
@@ -392,6 +401,35 @@ Tclh_UtfToExternalLifo(Tcl_Interp *ip,
 #endif /* TCLH_LIFO_E_SUCCESS */
 
 #ifdef _WIN32
+
+#if TCL_UTF_MAX >= 4
+
+static TclhCleanupEncodings(ClientData clientData, Tcl_Interp *interp)
+{
+    Tcl_Encoding encoding = (Tcl_Encoding)clientData;
+    if (encoding)
+        Tcl_FreeEncoding(encoding);
+}
+
+Tcl_Encoding TclhGetUtf16Encoding(Tclh_LibContext *tclhCtxP)
+{
+    Tcl_Encoding enc;
+
+    if (tclhCtxP == NULL || tclhCtxP->encUTF16LE == NULL) {
+        enc = Tcl_GetEncoding(NULL, "utf-16le");
+        if (tclhCtxP) {
+            tclhCtxP->encUTF16LE = enc;
+            Tcl_CallWhenDeleted(
+                tclhCtxP->interp, TclhCleanupEncodings, tclhCtxP->encUTF16LE);
+        }
+    } else {
+        enc = tclhCtxP->encUTF16LE;
+    }
+    TCLH_ASSERT(enc);
+    return enc;
+}
+#endif
+
 Tcl_Obj *
 Tclh_ObjFromWinChars(Tclh_LibContext *tclhCtxP, WCHAR *wsP, Tcl_Size numChars)
 {
@@ -400,13 +438,7 @@ Tclh_ObjFromWinChars(Tclh_LibContext *tclhCtxP, WCHAR *wsP, Tcl_Size numChars)
 #else
     Tcl_Encoding enc;
 
-    if (tclhCtxP == NULL || tclhCtxP->encUTF16LE == NULL) {
-        enc = Tcl_GetEncoding(NULL, "utf-16le");
-        if (tclhCtxP)
-            tclhCtxP->encUTF16LE = enc;
-    } else {
-        enc = tclhCtxP->encUTF16LE;
-    }
+    enc = TclhGetUtf16Encoding(tclhCtxP);
     TCLH_ASSERT(enc);
 
     /* 
@@ -423,6 +455,11 @@ Tclh_ObjFromWinChars(Tclh_LibContext *tclhCtxP, WCHAR *wsP, Tcl_Size numChars)
                                      &ds,
                                      NULL);
     TCLH_ASSERT(ret == TCL_OK); /* Should never fail for REPLACE profile */
+    
+    /* If we don't have a tclhCtxP, we need to release the encoding */
+    if (tclhCtxP == NULL) {
+        Tcl_FreeEncoding(enc);
+    }
     return Tcl_DStringToObj(&ds);
 #endif
 }
