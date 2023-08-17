@@ -177,7 +177,34 @@ int Tclh_UtfToExternalLifo(Tcl_Interp *ip,
 Tcl_Obj *
 Tclh_ObjFromWinChars(Tclh_LibContext *tclhCtxP, WCHAR *wsP, Tcl_Size numChars);
 
-#endif
+#ifdef TCLH_LIFO_E_SUCCESS /* Only define if Lifo module is available */
+
+/* Function: Tclh_ObjToWinCharsLifo
+ * Converts contents of a Tcl_Obj to WCHAR string
+ *
+ * Parameters:
+ * tclhCtxP - Tclh context. May be NULL in which case a temporary Tcl_Encoding
+ *    context is used.
+ * memLifoP - The memlifo from which to allocate memory
+ * objP - *Tcl_Obj* to be copied
+ * numCharsP - output location to hold the length (in number of characters,
+ *     not bytes) of the copied string. May be NULL. The length does not
+ *     include the terminating nul WCHAR.
+ *
+ * If the Tcl version supports encoding profiles, the encoding is converted
+ * using the replace profile.
+ *
+ * Returns:
+ * Pointer to the WCHAR string or NULL on error.
+ */
+WCHAR *Tclh_ObjToWinCharsLifo(Tclh_LibContext *tclhCtxP,
+                              Tclh_Lifo *memLifoP,
+                              Tcl_Obj *objP,
+                              Tcl_Size *numCharsP);
+
+#endif /* TCLH_LIFO_E_SUCCESS */
+
+#endif /* _WIN32 */
 
 #ifdef TCLH_SHORTNAMES
 #define ExternalToUtf Tclh_ExternalToUtf
@@ -185,6 +212,7 @@ Tclh_ObjFromWinChars(Tclh_LibContext *tclhCtxP, WCHAR *wsP, Tcl_Size numChars);
 #define ExternalToUtfAlloc Tclh_ExternalToUtfAlloc
 #define UtfToExternalLifo Tclh_UtfToExternalLifo
 #define ObjFromWinChars Tclh_ObjFromWinChars
+#define ObjToWinCharsLifo Tclh_ObjToWinCharsLifo
 #endif
 
 #ifdef TCLH_IMPL

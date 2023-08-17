@@ -463,4 +463,46 @@ Tclh_ObjFromWinChars(Tclh_LibContext *tclhCtxP, WCHAR *wsP, Tcl_Size numChars)
     return Tcl_DStringToObj(&ds);
 #endif
 }
+
+#ifdef TCLH_LIFO_E_SUCCESS
+WCHAR *Tclh_ObjToWinCharsLifo(Tclh_LibContext *tclhCtxP,
+                              Tclh_Lifo *memLifoP,
+                              Tcl_Obj *objP,
+                              Tcl_Size *numCharsP)
+{
+    Tcl_Encoding enc;
+
+    enc = TclhGetUtf16Encoding(tclhCtxP);
+    TCLH_ASSERT(enc);
+
+    Tcl_Size numBytes;
+    Tcl_Size fromLen;
+    const char *fromP;
+    WCHAR *wsP;
+    int ret;
+
+    fromP = Tcl_GetStringFromObj(objP, &fromLen);
+    ret   = Tclh_UtfToExternalLifo(tclhCtxP ? tclhCtxP->interp : NULL,
+                                 enc,
+                                 fromP,
+                                 fromLen,
+#ifdef TCLH_TCL87API
+                                 TCL_ENCODING_PROFILE_REPLACE |
+#endif
+                                     TCL_ENCODING_START | TCL_ENCODING_END,
+                                 memLifoP,
+                                 &wsP,
+                                 &numBytes,
+                                 NULL);
+    TCLH_ASSERT(ret == TCL_OK);
+    if (ret != TCL_OK) {
+        return NULL;
+    }
+    if (numCharsP)
+        *numCharsP = numBytes / sizeof(WCHAR);
+    return wsP;
+}
+
+#endif /* TCLH_LIFO_E_SUCCESS */
+
 #endif /* _WIN32 */
