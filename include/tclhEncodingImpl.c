@@ -441,6 +441,13 @@ Tclh_ObjFromWinChars(Tclh_LibContext *tclhCtxP, WCHAR *wsP, Tcl_Size numChars)
     enc = TclhGetUtf16Encoding(tclhCtxP);
     TCLH_ASSERT(enc);
 
+    if (wsP == NULL) {
+        return Tcl_NewObj(); /* Like Tcl_NewUnicodeObj */
+    }
+    if (numChars < 0) {
+        TCLH_ASSERT(sizeof(wchar_t) == sizeof(WCHAR));
+        numChars = wcslen(wsP);
+    }
     /* 
      * Note we do not use Tcl_Char16ToUtfDString because of its shortcomings
      * with respect to encoding errors and overallocation of memory.
@@ -491,7 +498,7 @@ WCHAR *Tclh_ObjToWinCharsLifo(Tclh_LibContext *tclhCtxP,
 #endif
                                      TCL_ENCODING_START | TCL_ENCODING_END,
                                  memLifoP,
-                                 &wsP,
+                                 (char **) &wsP,
                                  &numBytes,
                                  NULL);
     TCLH_ASSERT(ret == TCL_OK);
