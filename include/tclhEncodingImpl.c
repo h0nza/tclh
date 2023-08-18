@@ -482,7 +482,7 @@ Tclh_UtfToWinChars(Tclh_LibContext *tclhCtxP,
     enc = TclhGetUtf16Encoding(tclhCtxP);
     TCLH_ASSERT(enc);
 
-    ret = Tclh_ExternalToUtf(tclhCtxP->interp,
+    ret = Tclh_UtfToExternal(tclhCtxP->interp,
                              enc,
                              srcP,
                              srcLen,
