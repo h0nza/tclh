@@ -32,14 +32,8 @@
  * TCL_ERROR - Initialization failed. Library functions must not be called.
  *             An error message is left in the interpreter result.
  */
-TCLH_INLINE int
-Tclh_EncodingLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
-{
-    if (tclhCtxP == NULL) {
-        return Tclh_LibInit(interp, NULL);
-    }
-    return TCL_OK; /* Must have been already initialized */
-}
+Tclh_ReturnCode
+Tclh_EncodingLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP);
 
 /* Function: Tclh_ExternalToUtf
  * Wrapper around Tcl_ExternalToUtf to allow lengths > INT_MAX.
@@ -183,13 +177,65 @@ int Tclh_UtfToExternalLifo(Tcl_Interp *ip,
 Tcl_Obj *
 Tclh_ObjFromWinChars(Tclh_LibContext *tclhCtxP, WCHAR *wsP, Tcl_Size numChars);
 
-#endif
+/* Function: Tclh_UtfToWinChars
+ * Converts a string encoded in Tcl's internal UTF-8 to a WCHAR string
+ *
+ * Parameters:
+ * tclhCtxP - Tclh context. May be NULL in which case a temporary Tcl_Encoding
+ *    context is used.
+ * srcP - Tcl string to be converted (Tcl internal UTF-8 format)
+ * srcLen - length of source string. If negative, must be nul terminated
+ * dstP - output buffer
+ * dstCapacity - length of output buffer in WCHAR's
+ * numCharsP - number of characters stored in output buffer. May be NULL.
+ * 
+ * Returns:
+ * TCL_OK or one of the TCL_ENCODING status codes.
+ */
+int Tclh_UtfToWinChars(Tclh_LibContext *tclhCtxP,
+                       const char *srcP,
+                       Tcl_Size srcLen,
+                       WCHAR *dstP,
+                       Tcl_Size dstCapacity,
+                       Tcl_Size *numCharsP
+                       );
+
+#ifdef TCLH_LIFO_E_SUCCESS /* Only define if Lifo module is available */
+
+/* Function: Tclh_ObjToWinCharsLifo
+ * Converts a Tcl_Obj value to a WCHAR string
+ *
+ * Parameters:
+ * tclhCtxP - Tclh context. May be NULL in which case a temporary Tcl_Encoding
+ *    context is used.
+ * memLifoP - The memlifo from which to allocate memory
+ * objP - *Tcl_Obj* to be copied
+ * numCharsP - output location to hold the length (in number of characters,
+ *     not bytes) of the copied string. May be NULL. The length does not
+ *     include the terminating nul WCHAR.
+ *
+ * If the Tcl version supports encoding profiles, the encoding is converted
+ * using the replace profile.
+ *
+ * Returns:
+ * Pointer to the WCHAR string or NULL on error.
+ */
+WCHAR *Tclh_ObjToWinCharsLifo(Tclh_LibContext *tclhCtxP,
+                              Tclh_Lifo *memLifoP,
+                              Tcl_Obj *objP,
+                              Tcl_Size *numCharsP);
+
+#endif /* TCLH_LIFO_E_SUCCESS */
+
+#endif /* _WIN32 */
 
 #ifdef TCLH_SHORTNAMES
 #define ExternalToUtf Tclh_ExternalToUtf
 #define UtfToExternal Tclh_UtfToExternal
 #define ExternalToUtfAlloc Tclh_ExternalToUtfAlloc
+#define UtfToExternalLifo Tclh_UtfToExternalLifo
 #define ObjFromWinChars Tclh_ObjFromWinChars
+#define ObjToWinCharsLifo Tclh_ObjToWinCharsLifo
 #endif
 
 #ifdef TCLH_IMPL
