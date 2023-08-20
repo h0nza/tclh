@@ -29,6 +29,16 @@
 #define TCLH_TCLAPI_VERSION 0x0806
 #endif
 
+#if TCL_MAJOR_VERSION > 8
+# if TCL_UTF_MAX != 4
+#   error TCL_UTF_MAX must be 4 if Tcl major version is 9 or above.
+# endif
+#else
+# if TCL_UTF_MAX != 3
+#   error TCL_UTF_MAX must be 3 if Tcl major version is less than 9.
+# endif
+#endif
+
 #if TCLH_TCLAPI_VERSION >= 0x0807
 #define TCLH_TCL87API
 #include "tommath.h"

@@ -402,9 +402,8 @@ Tclh_UtfToExternalLifo(Tcl_Interp *ip,
 
 #ifdef _WIN32
 
-#if TCL_UTF_MAX >= 4
-
-static TclhCleanupEncodings(ClientData clientData, Tcl_Interp *interp)
+static void 
+TclhCleanupEncodings(ClientData clientData, Tcl_Interp *interp)
 {
     Tcl_Encoding encoding = (Tcl_Encoding)clientData;
     if (encoding)
@@ -415,20 +414,25 @@ Tcl_Encoding TclhGetUtf16Encoding(Tclh_LibContext *tclhCtxP)
 {
     Tcl_Encoding enc;
 
-    if (tclhCtxP == NULL || tclhCtxP->encUTF16LE == NULL) {
-        enc = Tcl_GetEncoding(NULL, "utf-16le");
+    if (tclhCtxP == NULL || tclhCtxP->encWinChar == NULL) {
+        enc = Tcl_GetEncoding(NULL,
+#ifdef TCLH_TCL87API
+                              "utf-16le"
+#else
+                              "unicode"
+#endif
+        );
         if (tclhCtxP) {
-            tclhCtxP->encUTF16LE = enc;
+            tclhCtxP->encWinChar = enc;
             Tcl_CallWhenDeleted(
-                tclhCtxP->interp, TclhCleanupEncodings, tclhCtxP->encUTF16LE);
+                tclhCtxP->interp, TclhCleanupEncodings, tclhCtxP->encWinChar);
         }
     } else {
-        enc = tclhCtxP->encUTF16LE;
+        enc = tclhCtxP->encWinChar;
     }
     TCLH_ASSERT(enc);
     return enc;
 }
-#endif
 
 Tcl_Obj *
 Tclh_ObjFromWinChars(Tclh_LibContext *tclhCtxP, WCHAR *wsP, Tcl_Size numChars)
@@ -450,18 +454,21 @@ Tclh_ObjFromWinChars(Tclh_LibContext *tclhCtxP, WCHAR *wsP, Tcl_Size numChars)
      */
     Tcl_DString ds;
     Tclh_ReturnCode ret;
-    ret = Tcl_ExternalToUtfDStringEx(NULL,
+    ret = Tcl_ExternalToUtfDStringEx(tclhCtxP->interp,
                                      enc,
                                      (char *)wsP,
                                      numChars < 0 ? -1 : numChars * sizeof(WCHAR),
                                      TCL_ENCODING_PROFILE_REPLACE,
                                      &ds,
                                      NULL);
-    TCLH_ASSERT(ret == TCL_OK); /* Should never fail for REPLACE profile */
-    
     /* If we don't have a tclhCtxP, we need to release the encoding */
     if (tclhCtxP == NULL) {
         Tcl_FreeEncoding(enc);
+    }
+    if (ret != TCL_OK) {
+        /* Should not really happen */
+        Tcl_DStringFree(&ds);
+        return NULL;
     }
     return Tcl_DStringToObj(&ds);
 #endif
@@ -496,7 +503,6 @@ Tclh_UtfToWinChars(Tclh_LibContext *tclhCtxP,
                              NULL,
                              NULL,
                              numCharsP);
-    TCLH_ASSERT(ret == TCL_OK); /* Should never fail for REPLACE profile */
     
     /* If we don't have a tclhCtxP, we need to release the encoding */
     if (tclhCtxP == NULL) {
@@ -535,7 +541,8 @@ WCHAR *Tclh_ObjToWinCharsLifo(Tclh_LibContext *tclhCtxP,
                                  (char **) &wsP,
                                  &numBytes,
                                  NULL);
-    TCLH_ASSERT(ret == TCL_OK);
+    TCLH_ASSERT(ret == TCL_OK); /* Because REPLACE profile => no encoding errors
+                                   and Lifo allocation => no memory alloc errors */
     if (ret != TCL_OK) {
         return NULL;
     }

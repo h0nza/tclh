@@ -12,8 +12,8 @@ struct Tclh_LibContext {
     Tcl_Interp *interp;
     TclhPointerRegistry *pointerRegistryP; /* PointerLib */
     Tcl_HashTable *atomRegistryP;          /* AtomLib */
-#if defined(_WIN32) && TCL_UTF_MAX > 3
-    Tcl_Encoding encUTF16LE;               /* EncodingLib */
+#if defined(_WIN32)
+    Tcl_Encoding encWinChar;               /* EncodingLib */
 #endif
 };
 
