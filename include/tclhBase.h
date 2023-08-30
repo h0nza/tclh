@@ -452,6 +452,48 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorInvalidValue(Tcl_Interp *interp,
                                        Tcl_Obj *badArgObj,
                                        const char *message);
 
+/* Function: Tclh_ErrorOptionMissing
+ * Reports a required option is not specified.
+ *
+ * Parameters:
+ * interp  - Tcl interpreter in which to report the error.
+ * optNameObj - The option name. May be NULL.
+ * message - Additional text to append to the standard error message. May be
+ * NULL.
+ *
+ * The Tcl *errorCode* variable is set to a list of three elements: the
+ * *TCLH_EMBEDDER* macro value set by the extension, the literal string
+ * *OPTION_MISSING* and the error message.
+ *
+ * Returns:
+ * TCL_ERROR - Always returns this value so caller can just pass on the return
+ *             value from this function.
+ */
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorOptionMissingStr(Tcl_Interp *interp,
+                                                   const char *optName,
+                                                   const char *message);
+
+/* Function: Tclh_ErrorOptionValueMissing
+ * Reports no option value has been specified for an option to a command
+ *
+ * Parameters:
+ * interp  - Tcl interpreter in which to report the error.
+ * optNameObj - The option name for which the value is missing. May be NULL.
+ * message - Additional text to append to the standard error message. May be
+ * NULL.
+ *
+ * The Tcl *errorCode* variable is set to a list of three elements: the
+ * *TCLH_EMBEDDER* macro value set by the extension, the literal string
+ * *OPTION_VALUE_MISSING* and the error message.
+ *
+ * Returns:
+ * TCL_ERROR - Always returns this value so caller can just pass on the return
+ *             value from this function.
+ */
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorOptionValueMissing(Tcl_Interp *interp,
+                                                        Tcl_Obj *optionNameObj,
+                                                        const char *message);
+
 /* Function: Tclh_ErrorNumArgs
  * Reports an invalid number of arguments passed into a command function.
  *
@@ -477,6 +519,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorNumArgs(Tcl_Interp *interp,
                                   int objc,
                                   Tcl_Obj *const objv[],
                                   const char *message);
+
 
 /* Function: Tclh_ErrorWrongType
  * Reports an error where a value is of the wrong type.

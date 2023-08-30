@@ -228,6 +228,45 @@ Tclh_ErrorInvalidValue(Tcl_Interp *interp,
 }
 
 Tclh_ReturnCode
+Tclh_ErrorOptionMissingStr(Tcl_Interp *interp,
+                        const char *optName,
+                        const char *message)
+{
+    Tcl_Obj *msgObj;
+    if (message == NULL)
+        message = "";
+    if (optName) {
+        msgObj = Tcl_ObjPrintf("Required option \"%s\" not specified. %s",
+                               optName,
+                               message);
+    }
+    else {
+        msgObj = Tcl_ObjPrintf("Required option not specified. %s", message);
+    }
+    return TclhRecordError(interp, "OPTION_MISSING", msgObj);
+}
+
+Tclh_ReturnCode
+Tclh_ErrorOptionValueMissing(Tcl_Interp *interp,
+                             Tcl_Obj *optionNameObj,
+                             const char *message)
+{
+    Tcl_Obj *msgObj;
+    if (message == NULL)
+        message = "";
+    if (optionNameObj) {
+        msgObj = Tcl_ObjPrintf("No value specified for option \"%s\". %s",
+                               Tcl_GetString(optionNameObj),
+                               message);
+    }
+    else {
+        msgObj = Tcl_ObjPrintf("No value specified for option. %s", message);
+    }
+    return TclhRecordError(interp, "OPTION_VALUE_MISSING", msgObj);
+}
+
+
+Tclh_ReturnCode
 Tclh_ErrorNumArgs(Tcl_Interp *interp,
                   int objc,
                   Tcl_Obj *const objv[],
