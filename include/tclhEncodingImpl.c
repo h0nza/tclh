@@ -17,6 +17,45 @@ Tclh_EncodingLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
     return TCL_OK; /* Must have been already initialized */
 }
 
+#ifndef TCLH_TCL87API
+Tcl_Size Tclh_GetEncodingNulLength (Tcl_Encoding encoding)
+{
+    if (encoding) {
+        const char *encName = Tcl_GetEncodingName(encoding);
+        if (encName) {
+            if (!strcmp(encName, "unicode"))
+                return 2;
+            if (!strcmp(encName, "ascii") || !strcmp(encName, "utf-8")
+                || !strncmp(encName, "iso8859-", 8)) {
+                return 1;
+            }
+        }
+    }
+
+    /* The long way */
+    char buf[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    int status;
+    status = Tcl_UtfToExternal(NULL,
+                               encoding,
+                               "",
+                               0,
+                               TCL_ENCODING_START | TCL_ENCODING_END,
+                               NULL,
+                               buf,
+                               sizeof(buf),
+                               &srcRead,
+                               &dstWrote,
+                               &dstChars);
+    TCLH_ASSERT(status == TCL_OK);
+    int i;
+    for (i = 0; i < sizeof(buf); ++i) {
+        if (buf[i])
+            break;
+    }
+    return i;
+}
+#endif
+
 #if TCL_MAJOR_VERSION >= 9
 int
 Tclh_ExternalToUtf(Tcl_Interp *interp,
@@ -36,7 +75,7 @@ Tclh_ExternalToUtf(Tcl_Interp *interp,
     Tcl_Size dstWrote = 0;
     Tcl_Size dstChars = 0;
     Tcl_EncodingState state;
-   
+
     if (statePtr)
         state = *statePtr;
     else
@@ -130,12 +169,12 @@ Tclh_UtfToExternal(Tcl_Interp *interp,
     Tcl_Size dstWrote = 0;
     Tcl_Size dstChars = 0;
     Tcl_EncodingState state;
-   
+
     if (statePtr)
         state = *statePtr;
     else
         statePtr = &state;
-    
+
     /*
      * Loop passing the wrapped function less than INT_MAX bytes each iteration.
      */
@@ -179,7 +218,7 @@ Tclh_UtfToExternal(Tcl_Interp *interp,
          * - no more input
          * - TCL_CONVERT_SYNTAX, TCL_CONVERT_UNKNOWN - encoding error
          * - TCL_CONVERT_NOSPACE - no space in destination
-         * 
+         *
          * TCL_OK, TCL_CONVERT_MULTIBYTE - keep going for rest of input
          */
         switch (result) {
@@ -296,7 +335,7 @@ Tclh_UtfToExternalAlloc(
      */
     if (numBytesOutP)
         *numBytesOutP = ds.length;/* Not including terminator */
-    
+
     if (numBytesOutP)
         *numBytesOutP = ds.length;/* Not including terminator */
     if (ds.string == ds.staticSpace) {
@@ -314,6 +353,152 @@ Tclh_UtfToExternalAlloc(
 
 #ifdef TCLH_LIFO_E_SUCCESS
 
+typedef struct UtfToExternalLifoContext {
+    Tcl_Encoding encoding;
+    Tcl_Size nulLength;
+    Tclh_Lifo *memlifoP;
+    char *bufP;
+    Tcl_Size bufSize;
+    Tcl_Size bufUsed;
+} UtfToExternalLifoContext;
+
+static int
+TclhUtfToExternalLifoHelper(Tcl_Interp *ip,
+                            const char *srcP,
+                            Tcl_Size srcLen,
+                            int flags, /* Only for TCL_ENCODING_PROFILE_* */
+                            UtfToExternalLifoContext *encCtxP,
+                            char **outPP,
+                            Tcl_Size *errorLocPtr
+                            )
+{
+    Tcl_Size nulLength = encCtxP->nulLength;
+
+    TCLH_ASSERT(encCtxP->bufSize > 0);
+    TCLH_ASSERT(encCtxP->bufUsed >= 0 && encCtxP->bufUsed <= encCtxP->bufSize);
+
+    if (srcLen < 0)
+        srcLen = strlen(srcP);
+
+    Tcl_Size origSrcLen = srcLen;
+    Tcl_Size origUsed = encCtxP->bufUsed;
+    int origFlags = flags;
+
+    flags |= TCL_ENCODING_START | TCL_ENCODING_END;
+
+    /*
+     * Keep looping passing at most INT_MAX in each iteration.
+     */
+    Tcl_EncodingState state;
+    while (1) {
+        int status;
+        Tcl_Size dstEstimate;
+        Tcl_Size dstSpace = encCtxP->bufSize - encCtxP->bufUsed;
+
+        if ((TCL_SIZE_MAX/nulLength) > srcLen)
+            dstEstimate = srcLen * nulLength;
+        else
+            dstEstimate = srcLen;
+        if ((TCL_SIZE_MAX-nulLength) >= dstEstimate)
+            dstEstimate += nulLength;
+        if (dstEstimate < 6)
+            dstEstimate = 6; /* Quirk of Tcl encoders, at least space for one max UTF-8 sequence */
+        if (dstSpace < dstEstimate) {
+            void *newP = Tclh_LifoExpandLast(
+                encCtxP->memlifoP, dstEstimate - dstSpace, 0);
+            if (newP == NULL) {
+                goto alloc_fail;
+            }
+            encCtxP->bufP = (char *)newP;
+            encCtxP->bufSize += dstEstimate - dstSpace;
+            dstSpace = dstEstimate;
+        }
+
+        /* We can only feed in max INT_MAX at a time */
+        int srcChunkLen, srcChunkRead;
+        int dstChunkCapacity, dstChunkWrote;
+        if (srcLen > INT_MAX) {
+            srcChunkLen = INT_MAX;
+            /* We are passing in only a fragment so ensure END is off */
+            flags &= ~TCL_ENCODING_END;
+        }
+        else {
+            srcChunkLen = (int) srcLen;
+            flags |= TCL_ENCODING_END;
+        }
+
+        dstChunkCapacity = dstSpace > INT_MAX ? INT_MAX : (int)dstSpace;
+
+        srcChunkRead = 0;
+        dstChunkWrote = 0;
+        status = Tcl_UtfToExternal(ip,
+                                   encCtxP->encoding,
+                                   srcP,
+                                   srcChunkLen,
+                                   flags,
+                                   &state,
+                                   encCtxP->bufP + encCtxP->bufUsed,
+                                   dstChunkCapacity,
+                                   &srcChunkRead,
+                                   &dstChunkWrote,
+                                   NULL);
+        TCLH_ASSERT(srcChunkRead <= srcChunkLen);
+        TCLH_ASSERT(dstChunkWrote <= dstChunkCapacity);
+        encCtxP->bufUsed += dstChunkWrote;
+        srcP += srcChunkRead;
+        srcLen -= srcChunkRead;
+        switch (status) {
+        case TCL_CONVERT_NOSPACE:
+            break; /* Keep looping to expand destination */
+        case TCL_CONVERT_MULTIBYTE:
+        case TCL_OK:
+            if (srcLen > 0)
+                break; /* Not done yet */
+            /* Fall thru to return */
+        case TCL_CONVERT_SYNTAX:
+        case TCL_CONVERT_UNKNOWN:
+            /* Add terminating nul */
+            if ((encCtxP->bufSize - encCtxP->bufUsed) < nulLength) {
+                void *newP = Tclh_LifoExpandLast(
+                    encCtxP->memlifoP, nulLength, 0); /* May be slight overalloc*/
+                if (newP == NULL) {
+                    goto alloc_fail;
+                }
+                encCtxP->bufP = (char *)newP;
+                encCtxP->bufSize += nulLength;
+            }
+            memset(encCtxP->bufP + encCtxP->bufUsed, 0, nulLength);
+            encCtxP->bufUsed += nulLength;
+            if (outPP)
+                *outPP = origUsed + encCtxP->bufP;
+            if (errorLocPtr) {
+                *errorLocPtr = status == TCL_OK ? -1 : origSrcLen - srcLen;
+            }
+            return status;
+
+        case TCL_ERROR:
+        default:
+            Tclh_ErrorEncodingFromUtf8(ip, status, NULL, 0);
+            /* Reset values */
+            encCtxP->bufUsed = origUsed;
+            if (outPP)
+                *outPP = NULL;
+            if (errorLocPtr)
+                *errorLocPtr = origSrcLen - srcLen;
+            return TCL_ERROR;
+        }
+        /* Keep looping, more input to be processed */
+    }
+
+alloc_fail:
+    encCtxP->bufUsed = origUsed;
+    Tclh_ErrorAllocation(
+        ip, "buffer", "Allocation of external encoding data failed.");
+    if (outPP)
+        *outPP = NULL;
+    return TCL_CONVERT_NOSPACE;
+}
+
 int
 Tclh_UtfToExternalLifo(Tcl_Interp *ip,
                        Tcl_Encoding encoding,
@@ -325,84 +510,101 @@ Tclh_UtfToExternalLifo(Tcl_Interp *ip,
                        Tcl_Size *numBytesOutP,
                        Tcl_Size *errorLocPtr)
 {
-    Tcl_Size dstLen, srcLen, dstSpace;
-    Tcl_Size srcLatestRead, dstLatestWritten;
-    const char *srcP;
-    char *dstP;
-    int status;
-    Tcl_EncodingState state;
+    UtfToExternalLifoContext encCtx;
 
-    srcP = fromP;               /* Keep fromP unchanged for error messages */
-    srcLen = fromLen;
+    encCtx.encoding = encoding;
+    encCtx.nulLength = Tclh_GetEncodingNulLength(encoding);
+    encCtx.memlifoP  = memlifoP;
+    encCtx.bufSize   = 256;
+    encCtx.bufP      = Tclh_LifoAlloc(memlifoP, encCtx.bufSize);
+    encCtx.bufUsed   = 0;
 
-    flags = TCL_ENCODING_START | TCL_ENCODING_END;
-
-    dstSpace = srcLen + 4; /* Possibly four nuls (UTF-32) */
-    dstP = Tclh_LifoAlloc(memlifoP, dstSpace);
-    dstLen = 0;
-    while (1) {
-        /* dstP is buffer. dstLen is what's written so far */
-        status = Tclh_UtfToExternal(ip,
-                                    encoding,
-                                    srcP,
-                                    srcLen,
-                                    flags,
-                                    &state,
-                                    dstP + dstLen,
-                                    dstSpace - dstLen,
-                                    &srcLatestRead,
-                                    &dstLatestWritten,
-                                    NULL);
-        TCLH_ASSERT(dstSpace >= dstLatestWritten);
-        dstLen += dstLatestWritten;
-        /* Terminate loop on any status other than space  */
-        if (status != TCL_CONVERT_NOSPACE) {
-            if (status == TCL_ERROR) {
-                *outPP = NULL;
-                if (numBytesOutP)
-                    *numBytesOutP = 0;
-                if (errorLocPtr) {
-                    /* Do not take into account current srcLatestRead */
-                    *errorLocPtr = (Tcl_Size) (srcP - fromP);
-                }
-            } else {
-                /* Tack on 4 nuls as we don't know how many nuls encoding uses */
-                if ((dstSpace - dstLen) < 4)
-                    dstP = Tclh_LifoResizeLast(memlifoP, 4 + dstLen, 0);
-                int i;
-                for (i = 0; i < 4; ++i)
-                    dstP[dstLen + i] = 0;
-                if (numBytesOutP)
-                    *numBytesOutP = dstLen; /* Does not include terminating nul */
-                if (errorLocPtr) {
-                    if (status == TCL_OK)
-                        *errorLocPtr = -1;
-                    else
-                        *errorLocPtr =
-                            (Tcl_Size)((srcP - fromP) + srcLatestRead);
-                }
-                *outPP = dstP;
-            }
-            return status;
-        }
-        flags &= ~ TCL_ENCODING_START;
-
-        TCLH_ASSERT(srcLatestRead <= srcLen);
-        srcP += srcLatestRead;
-        srcLen -= srcLatestRead;
-        Tcl_Size delta = dstSpace / 2;
-        if ((TCL_SIZE_MAX-delta) < dstSpace)
-            dstSpace = TCL_SIZE_MAX;
-        else
-            dstSpace += delta;
-        dstP = Tclh_LifoResizeLast(memlifoP, dstSpace, 0);
+    int status = TclhUtfToExternalLifoHelper(
+        ip, fromP, fromLen, flags, &encCtx, outPP, errorLocPtr);
+    if (status == TCL_ERROR) {
+        *outPP = NULL;
+        if (numBytesOutP)
+            *numBytesOutP = 0;
     }
+    else {
+        if (numBytesOutP)
+            *numBytesOutP = encCtx.bufUsed - encCtx.nulLength; /* without end nul */
+    }
+    return status;
 }
+
+void *
+Tclh_ObjToMultiSzLifo(Tclh_LibContext *tclhCtxP,
+                      Tcl_Encoding encoding,
+                      Tclh_Lifo *memlifoP,
+                      Tcl_Obj *objP,
+                      int flags,
+                      Tcl_Size *numElemsP,
+                      Tcl_Size *numBytesP)
+{
+    UtfToExternalLifoContext encCtx;
+    Tcl_Size i, numElems;
+    Tcl_Interp *ip = tclhCtxP ? tclhCtxP->interp : NULL;
+
+    if (Tcl_ListObjLength(ip, objP, &numElems) != TCL_OK)
+        return NULL;
+
+    encCtx.encoding = encoding;
+    encCtx.nulLength = Tclh_GetEncodingNulLength(encoding);
+    encCtx.memlifoP  = memlifoP;
+    encCtx.bufSize   = 256;
+    encCtx.bufP      = Tclh_LifoAlloc(memlifoP, encCtx.bufSize);
+    encCtx.bufUsed   = 0;
+
+    for (i = 0; i < numElems; ++i) {
+        Tcl_Obj *elemObj;
+        char *s;
+        Tcl_Size len;
+        int status;
+        if (Tcl_ListObjIndex(ip, objP, i, &elemObj) != TCL_OK)
+            return NULL;
+        Tcl_IncrRefCount(elemObj);
+        s = Tcl_GetStringFromObj(elemObj, &len);
+        status = TclhUtfToExternalLifoHelper(
+            ip, s, len, flags, &encCtx, NULL, NULL);
+        if (status != TCL_OK) {
+            Tclh_ErrorEncodingFromUtf8(ip, status, s, len);
+            Tcl_DecrRefCount(elemObj);
+            if (numElemsP)
+                *numElemsP = 0;
+            if (numBytesP)
+                *numBytesP = 0;
+            return NULL;
+        }
+        Tcl_DecrRefCount(elemObj);
+    } /* for i < numElems */
+
+    /* Tack on the empty string at end */
+    void *newP = Tclh_LifoExpandLast(encCtx.memlifoP, encCtx.nulLength, 0);
+    if (newP == NULL) {
+        Tclh_ErrorAllocation(
+            ip, "buffer", "Allocation of external encoding data failed.");
+        if (numElemsP)
+            *numElemsP = 0;
+        if (numBytesP)
+            *numBytesP = 0;
+        return NULL;
+    }
+    memset(encCtx.bufUsed + encCtx.bufP, 0, encCtx.nulLength);
+    encCtx.bufUsed += encCtx.nulLength;
+    if (numElemsP)
+        *numElemsP = numElems;
+    if (numBytesP)
+        *numBytesP = encCtx.bufUsed;
+
+    return encCtx.bufP;
+}
+
 #endif /* TCLH_LIFO_E_SUCCESS */
 
 #ifdef _WIN32
 
-static void 
+static void
 TclhCleanupEncodings(ClientData clientData, Tcl_Interp *interp)
 {
     Tcl_Encoding encoding = (Tcl_Encoding)clientData;
@@ -550,6 +752,62 @@ WCHAR *Tclh_ObjToWinCharsLifo(Tclh_LibContext *tclhCtxP,
         *numCharsP = numBytes / sizeof(WCHAR);
     return wsP;
 }
+
+WCHAR *
+Tclh_ObjToWinCharsMultiLifo(Tclh_LibContext *tclhCtxP,
+                            Tclh_Lifo *memLifoP,
+                            Tcl_Obj *objP,
+                            Tcl_Size *numElemsP,
+                            Tcl_Size *numBytesP)
+{
+    Tcl_Encoding enc;
+
+    enc = TclhGetUtf16Encoding(tclhCtxP);
+    TCLH_ASSERT(enc);
+
+    return (WCHAR *)Tclh_ObjToMultiSzLifo(tclhCtxP,
+                                          enc,
+                                          memLifoP,
+                                          objP,
+#ifdef TCLH_TCL87API
+                                          TCL_ENCODING_PROFILE_REPLACE,
+#endif
+                                          numElemsP,
+                                          numBytesP);
+}
+
+Tcl_Obj *
+Tclh_ObjFromWinCharsMulti(Tclh_LibContext *tclhCtxP,
+                          WCHAR *lpcw,
+                          Tcl_Size maxlen)
+{
+    Tcl_Obj *listObj = Tcl_NewListObj(0, NULL);
+    WCHAR *start = lpcw;
+
+    if (lpcw == NULL || maxlen == 0)
+        return listObj;
+
+    if (maxlen == -1)
+        maxlen = INT_MAX;
+
+    while ((lpcw - start) < maxlen && *lpcw) {
+        WCHAR *s;
+        /* Locate end of this string */
+        s = lpcw;
+        while ((lpcw - start) < maxlen && *lpcw)
+            ++lpcw;
+        if (s == lpcw) {
+            /* Zero-length string - end of multi-sz */
+            break;
+        }
+        Tcl_ListObjAppendElement(
+            NULL, listObj, Tclh_ObjFromWinChars(tclhCtxP, s, (lpcw - s)));
+        ++lpcw;            /* Point beyond this string, possibly beyond end */
+    }
+
+    return listObj;
+}
+
 
 #endif /* TCLH_LIFO_E_SUCCESS */
 
