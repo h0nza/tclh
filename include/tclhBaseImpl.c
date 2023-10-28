@@ -340,9 +340,7 @@ Tclh_ErrorEncodingFromUtf8(Tcl_Interp *ip,
                            Tcl_Size utf8Len)
 {
     const char *message;
-    char limited[80];
-    if (utf8Len < 0)
-        utf8Len = Tclh_strlen(utf8);
+
     switch (encoding_status) {
     case TCL_CONVERT_NOSPACE:
         message =
@@ -361,12 +359,22 @@ Tclh_ErrorEncodingFromUtf8(Tcl_Interp *ip,
         message = NULL;
         break;
     }
-    /* Remember fromLen does not include nul */
+
+    char limited[80];
+    if (utf8 == NULL) {
+        utf8 = "";
+        utf8Len = 0;
+    }
+    else if (utf8Len < 0)
+        utf8Len = Tclh_strlen(utf8);
+
+    /* TODO - print utf8 but what if it is invalid encoding! May be print in hex? */
     snprintf(limited,
-              utf8Len < sizeof(limited) ? utf8Len : sizeof(limited),
+              sizeof(limited),
               "%s",
               utf8);
-    return Tclh_ErrorInvalidValueStr(ip, utf8, message);
+
+    return Tclh_ErrorInvalidValueStr(ip, limited, message);
 }
 
 

@@ -60,6 +60,23 @@ TCLH_INLINE int Tclh_ExternalToUtf(Tcl_Interp *interp, Tcl_Encoding encoding,
 }
 #endif
 
+/* Function: Tclh_GetEncodingNulLength
+ * Returns the number of bytes used for the terminating nul in an encoding.
+ *
+ * Parameters:
+ * encoding - target encoding
+ *
+ * Returns:
+ * Number of nul bytes used by encoding.
+ */
+#ifndef TCLH_TCL87API
+Tcl_Size Tclh_GetEncodingNulLength (Tcl_Encoding encoding);
+#else
+TCLH_INLINE Tcl_Size Tclh_GetEncodingNulLength(Tcl_Encoding encoding) {
+    return Tcl_GetEncodingNulLength(encoding);
+}
+#endif
+
 /* Function: Tclh_UtfToExternal
  * Wrapper around Tcl_UtfToExternal to allow lengths > INT_MAX.
  *
@@ -138,11 +155,11 @@ int Tclh_UtfToExternalAlloc(Tcl_Interp *interp,
  * memlifoP - The Tclh_MemLifo from which to allocate memory.
  * numBytesOutP - location to store number of bytes copied to the buffer
  *    not counting the terminating nul bytes. May be NULL.
- * 
+ *
  * The other parameters are as for Tcl_UtfToExternalDStringEx. See the Tcl
  * documentation for details. This function differs in that it returns the
  * output in memory allocated from a Tclh_Lifo.
- * 
+ *
  * The *tclhLifo.h* file must be included before *tclhEncoding.h* 
  * for this function to be present.
  */
@@ -157,6 +174,38 @@ int Tclh_UtfToExternalLifo(Tcl_Interp *ip,
                            Tcl_Size *errorLocPtr);
 
 #endif
+
+/* Function: Tclh_ObjToMultiSzLifo
+ * Converts a list of Tcl_Obj to a multi sz string.
+ *
+ * Parameters:
+ * tclhCtxP - Tclh context. May be NULL in which case a temporary Tcl_Encoding
+ *    context is used.
+ * encoding - Tcl encoding
+ * memLifoP - The memlifo from which to allocate memory
+ * objP - *Tcl_Obj* containing list of strings
+ * flags - TCL_ENCODING_PROFILE_* flags
+ * numElemsP - output location to hold the number of strings. May be NULL.
+ * numBytesP - output location to hold the number of bytes including
+ *             terminating nuls. May be NULL.
+ *
+ * A multi-sz string is a sequence of nul-terminated strings with an
+ * additional nul indicating the end of the string.
+ *
+ * If the Tcl version supports encoding profiles, the encoding is converted
+ * using the replace profile.
+ *
+ * Returns:
+ * Pointer to the MultiSz WCHAR string or NULL on error.
+ */
+void *Tclh_ObjToMultiSzLifo(Tclh_LibContext *tclhCtxP,
+                             Tcl_Encoding encoding,
+                             Tclh_Lifo *memLifoP,
+                             Tcl_Obj *objP,
+                             int flags,
+                             Tcl_Size *numElemsP,
+                             Tcl_Size *numBytesP
+                             );
 
 #ifdef _WIN32
 /* Function: Tclh_ObjFromWinChars
@@ -225,21 +274,49 @@ WCHAR *Tclh_ObjToWinCharsLifo(Tclh_LibContext *tclhCtxP,
                               Tcl_Obj *objP,
                               Tcl_Size *numCharsP);
 
+/* Function: Tclh_ObjToWinCharsMultiLifo
+ * Converts a list of Tcl_Obj values to a Windows MultiSz WCHAR string.
+ *
+ * Parameters:
+ * tclhCtxP - Tclh context. May be NULL in which case a temporary Tcl_Encoding
+ *    context is used.
+ * memLifoP - The memlifo from which to allocate memory
+ * objP - *Tcl_Obj* to be copied
+ * numElemsP - output location to hold the number of strings
+ *     May be NULL.
+ * numBytesP - Number of bytes including all terminators. May be NULL.
+ * If the Tcl version supports encoding profiles, the encoding is converted
+ * using the replace profile.
+ *
+ * Returns:
+ * Pointer to the MultiSz WCHAR string or NULL on error.
+ */
+WCHAR *Tclh_ObjToWinCharsMultiLifo(Tclh_LibContext *tclhCtxP,
+                                   Tclh_Lifo *memLifoP,
+                                   Tcl_Obj *objP,
+                                   Tcl_Size *numElemsP,
+                                   Tcl_Size *numBytesP);
+
 #endif /* TCLH_LIFO_E_SUCCESS */
 
 #endif /* _WIN32 */
 
 #ifdef TCLH_SHORTNAMES
-#define ExternalToUtf Tclh_ExternalToUtf
-#define UtfToExternal Tclh_UtfToExternal
-#define ExternalToUtfAlloc Tclh_ExternalToUtfAlloc
-#define UtfToExternalLifo Tclh_UtfToExternalLifo
-#define ObjFromWinChars Tclh_ObjFromWinChars
-#define ObjToWinCharsLifo Tclh_ObjToWinCharsLifo
+# define GetEncodingNulLength Tclh_GetEncodingNulLength
+# define ExternalToUtf Tclh_ExternalToUtf
+# define UtfToExternal Tclh_UtfToExternal
+# define ExternalToUtfAlloc Tclh_ExternalToUtfAlloc
+# define UtfToExternalLifo Tclh_UtfToExternalLifo
+# define ObjToMultiSzLifo Tclh_ObjToMultiSzLifo
+# ifdef _WIN32
+#  define ObjFromWinChars Tclh_ObjFromWinChars
+#  define ObjToWinCharsLifo Tclh_ObjToWinCharsLifo
+#  define ObjToWinCharsMultiLifo Tclh_ObjToWinCharsMultiLifo
+# endif
 #endif
 
 #ifdef TCLH_IMPL
-#include "tclhEncodingImpl.c"
+# include "tclhEncodingImpl.c"
 #endif
 
 #endif /* TCLHENCODING_H */
