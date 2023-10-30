@@ -382,7 +382,6 @@ TclhUtfToExternalLifoHelper(Tcl_Interp *ip,
 
     Tcl_Size origSrcLen = srcLen;
     Tcl_Size origUsed = encCtxP->bufUsed;
-    int origFlags = flags;
 
     flags |= TCL_ENCODING_START | TCL_ENCODING_END;
 
