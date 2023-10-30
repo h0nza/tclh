@@ -43,9 +43,9 @@ Tcl_Size Tclh_GetEncodingNulLength (Tcl_Encoding encoding)
                                NULL,
                                buf,
                                sizeof(buf),
-                               &srcRead,
-                               &dstWrote,
-                               &dstChars);
+                               NULL,
+                               NULL,
+                               NULL);
     TCLH_ASSERT(status == TCL_OK);
     int i;
     for (i = 0; i < sizeof(buf); ++i) {
@@ -378,7 +378,7 @@ TclhUtfToExternalLifoHelper(Tcl_Interp *ip,
     TCLH_ASSERT(encCtxP->bufUsed >= 0 && encCtxP->bufUsed <= encCtxP->bufSize);
 
     if (srcLen < 0)
-        srcLen = strlen(srcP);
+        srcLen = Tclh_strlen(srcP);
 
     Tcl_Size origSrcLen = srcLen;
     Tcl_Size origUsed = encCtxP->bufUsed;
@@ -770,6 +770,8 @@ Tclh_ObjToWinCharsMultiLifo(Tclh_LibContext *tclhCtxP,
                                           objP,
 #ifdef TCLH_TCL87API
                                           TCL_ENCODING_PROFILE_REPLACE,
+#else
+                                          0,
 #endif
                                           numElemsP,
                                           numBytesP);
@@ -800,7 +802,7 @@ Tclh_ObjFromWinCharsMulti(Tclh_LibContext *tclhCtxP,
             break;
         }
         Tcl_ListObjAppendElement(
-            NULL, listObj, Tclh_ObjFromWinChars(tclhCtxP, s, (lpcw - s)));
+            NULL, listObj, Tclh_ObjFromWinChars(tclhCtxP, s, (Tcl_Size) (lpcw - s)));
         ++lpcw;            /* Point beyond this string, possibly beyond end */
     }
 
