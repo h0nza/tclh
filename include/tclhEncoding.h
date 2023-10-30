@@ -315,7 +315,6 @@ WCHAR *Tclh_ObjToWinCharsMultiLifo(Tclh_LibContext *tclhCtxP,
 Tcl_Obj *Tclh_ObjFromWinCharsMulti(Tclh_LibContext *tclhCtxP,
                                    WCHAR *lpcw,
                                    Tcl_Size maxlen);
-
 #endif /* TCLH_LIFO_E_SUCCESS */
 
 #endif /* _WIN32 */

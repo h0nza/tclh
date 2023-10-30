@@ -808,7 +808,6 @@ Tclh_ObjFromWinCharsMulti(Tclh_LibContext *tclhCtxP,
     return listObj;
 }
 
-
 #endif /* TCLH_LIFO_E_SUCCESS */
 
 #endif /* _WIN32 */
