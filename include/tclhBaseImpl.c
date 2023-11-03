@@ -136,16 +136,20 @@ Tclh_ErrorExists(Tcl_Interp *interp,
     Tcl_Obj *msgObj;
     if (type == NULL)
         type = "Object";
+    const char *sep;
     if (message == NULL)
-        message = "";
+        sep = message = "";
+    else
+        sep = " ";
     if (searchObj) {
-        msgObj = Tcl_ObjPrintf("%s \"%s\" already exists. %s",
+        msgObj = Tcl_ObjPrintf("%s \"%s\" already exists.%s%s",
                                type,
                                Tcl_GetString(searchObj),
+                               sep,
                                message);
     }
     else {
-        msgObj = Tcl_ObjPrintf("%s already exists. %s", type, message);
+        msgObj = Tcl_ObjPrintf("%s already exists.%s%s", type, sep, message);
     }
     return TclhRecordError(interp, "EXISTS", msgObj);
 }
@@ -169,16 +173,20 @@ Tclh_ErrorNotFoundStr(Tcl_Interp *interp,
     Tcl_Obj *msgObj;
     if (type == NULL)
         type = "Object";
+    const char *sep;
     if (message == NULL)
-        message = "";
+        sep = message = "";
+    else
+        sep = " ";
     if (searchStr) {
-        msgObj = Tcl_ObjPrintf("%s \"%s\" not found or inaccessible. %s",
+        msgObj = Tcl_ObjPrintf("%s \"%s\" not found or inaccessible.%s%s",
                                type,
                                searchStr,
+                               sep,
                                message);
     }
     else {
-        msgObj = Tcl_ObjPrintf("%s not found. %s", type, message);
+        msgObj = Tcl_ObjPrintf("%s not found.%s%s", type, sep, message);
     }
     return TclhRecordError(interp, "NOT_FOUND", msgObj);
 }
@@ -192,12 +200,15 @@ Tclh_ErrorOperFailed(Tcl_Interp *interp,
     Tcl_Obj *msgObj;
     const char *operand;
     operand = operandObj == NULL ? "object" : Tcl_GetString(operandObj);
+    const char *sep;
     if (message == NULL)
-        message = "";
-    if (oper)
-        msgObj = Tcl_ObjPrintf("Operation %s failed on %s. %s", oper, operand, message);
+        sep = message = "";
     else
-        msgObj = Tcl_ObjPrintf("Operation failed on %s. %s", operand, message);
+        sep = " ";
+    if (oper)
+        msgObj = Tcl_ObjPrintf("Operation %s failed on %s.%s%s", oper, operand, sep, message);
+    else
+        msgObj = Tcl_ObjPrintf("Operation failed on %s.%s%s", operand, sep, message);
     return TclhRecordError(interp, "OPER_FAILED", msgObj);
 }
 
@@ -207,13 +218,16 @@ Tclh_ErrorInvalidValueStr(Tcl_Interp *interp,
                           const char *message)
 {
     Tcl_Obj *msgObj;
+    const char *sep;
     if (message == NULL)
-        message = "";
+        sep = message = "";
+    else
+        sep = " ";
     if (badValue) {
-        msgObj = Tcl_ObjPrintf("Invalid value \"%s\". %s", badValue, message);
+        msgObj = Tcl_ObjPrintf("Invalid value \"%s\".%s%s", badValue, sep, message);
     }
     else {
-        msgObj = Tcl_ObjPrintf("Invalid value. %s", message);
+        msgObj = Tcl_ObjPrintf("Invalid value.%s%s", sep, message);
     }
     return TclhRecordError(interp, "INVALID_VALUE", msgObj);
 }
@@ -233,15 +247,20 @@ Tclh_ErrorOptionMissingStr(Tcl_Interp *interp,
                         const char *message)
 {
     Tcl_Obj *msgObj;
+    const char *sep;
     if (message == NULL)
-        message = "";
+        sep = message = "";
+    else
+        sep = " ";
     if (optName) {
-        msgObj = Tcl_ObjPrintf("Required option \"%s\" not specified. %s",
+        msgObj = Tcl_ObjPrintf("Required option \"%s\" not specified.%s%s",
                                optName,
+                               sep,
                                message);
     }
     else {
-        msgObj = Tcl_ObjPrintf("Required option not specified. %s", message);
+        msgObj =
+            Tcl_ObjPrintf("Required option not specified.%s%s", sep, message);
     }
     return TclhRecordError(interp, "OPTION_MISSING", msgObj);
 }
@@ -252,15 +271,19 @@ Tclh_ErrorOptionValueMissing(Tcl_Interp *interp,
                              const char *message)
 {
     Tcl_Obj *msgObj;
+    const char *sep;
     if (message == NULL)
-        message = "";
+        sep = message = "";
+    else
+        sep = " ";
     if (optionNameObj) {
-        msgObj = Tcl_ObjPrintf("No value specified for option \"%s\". %s",
+        msgObj = Tcl_ObjPrintf("No value specified for option \"%s\".%s%s",
                                Tcl_GetString(optionNameObj),
+                               sep,
                                message);
     }
     else {
-        msgObj = Tcl_ObjPrintf("No value specified for option. %s", message);
+        msgObj = Tcl_ObjPrintf("No value specified for option.%s%s", sep, message);
     }
     return TclhRecordError(interp, "OPTION_VALUE_MISSING", msgObj);
 }
@@ -280,11 +303,14 @@ Tclh_ReturnCode
 Tclh_ErrorAllocation(Tcl_Interp *interp, const char *type, const char *message)
 {
     Tcl_Obj *msgObj;
-    if (message == NULL)
-        message = "";
     if (type == NULL)
         type = "Object";
-    msgObj = Tcl_ObjPrintf("%s allocation failed. %s", type, message);
+    const char *sep;
+    if (message == NULL)
+        sep = message = "";
+    else
+        sep = " ";
+    msgObj = Tcl_ObjPrintf("%s allocation failed.%s%s", type, sep, message);
     return TclhRecordError(interp, "ALLOCATION", msgObj);
 }
 
@@ -399,7 +425,7 @@ Tcl_Obj *TclhMapWindowsError(
         Tcl_DStringAppend(&ds, msgPtr, -1);
         p      = Tcl_DStringValue(&ds);
         length = Tcl_DStringLength(&ds);/* Does NOT include terminating nul */
-        if (length && p[length] == ' ') {
+        if (length && p[length-1] != ' ') {
             Tcl_DStringAppend(&ds, " ", 1);
         }
     }
@@ -414,14 +440,15 @@ Tcl_Obj *TclhMapWindowsError(
                             0, /* Lang id */
                             (WCHAR *) &winErrorMessagePtr,
                             0, NULL);
-    if (length > 0) {
-        /* Strip trailing CR LF if any */
-        if (winErrorMessagePtr[length-1] == L'\n')
+    while (length > 0) {
+        /* Strip trailing whitespace */
+        WCHAR wch = winErrorMessagePtr[length - 1];
+        if (wch == L'\n' || wch == L'\r' || wch == L' ' || wch == L'\t')
             --length;
-        if (length > 0) {
-            if (winErrorMessagePtr[length-1] == L'\r')
-                --length;
-        }
+        else
+            break;
+    }
+    if (length > 0) {
 #if TCLH_TCLAPI_VERSION < 0x0807
         objPtr =
             Tcl_NewStringObj(Tcl_DStringValue(&ds), Tcl_DStringLength(&ds));
