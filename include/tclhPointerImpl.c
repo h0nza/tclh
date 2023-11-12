@@ -224,6 +224,36 @@ Tclh_PointerObjGetTag(Tcl_Interp *interp,
     return TCL_OK;
 }
 
+Tclh_ReturnCode
+Tclh_PointerObjCompare(Tcl_Interp *interp,
+                       Tcl_Obj *ptr1Obj,
+                       Tcl_Obj *ptr2Obj,
+                       int *resultP)
+{
+    void *ptr1, *ptr2;
+    TCLH_CHECK_RESULT(Tclh_PointerUnwrap(interp, ptr1Obj, &ptr1));
+    TCLH_CHECK_RESULT(Tclh_PointerUnwrap(interp, ptr2Obj, &ptr2));
+    if (ptr1 != ptr2) {
+        *resultP = 0;
+        return TCL_OK;
+    }
+
+    Tclh_PointerTypeTag tag1;
+    Tclh_PointerTypeTag tag2;
+    TCLH_CHECK_RESULT(Tclh_PointerObjGetTag(interp, ptr1Obj, &tag1));
+    TCLH_CHECK_RESULT(Tclh_PointerObjGetTag(interp, ptr2Obj, &tag2));
+    if (tag1 == tag2) {
+        *resultP = 1;
+        return TCL_OK;
+    }
+    if (tag1 == NULL || tag2 == NULL) {
+        *resultP = -1;
+        return TCL_OK;
+    }
+    *resultP = strcmp(Tcl_GetString(tag1), Tcl_GetString(tag2)) ? -1 : 1;
+    return TCL_OK;
+}
+
 static Tclh_ReturnCode
 TclhUnwrapAnyOfVA(Tcl_Interp *interp,
                   Tclh_LibContext *tclhCtxP,

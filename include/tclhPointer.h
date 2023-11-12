@@ -526,6 +526,26 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerCast(Tcl_Interp *interp,
                                  Tclh_PointerTypeTag newTagObj,
                                  Tcl_Obj **castPtrObj);
 
+/* Function: Tclh_PointerObjCompare
+ * Compares two wrapped pointers for equality
+ *
+ * Parameters:
+ * ip - Interpreter for error messages. May be NULL.
+ * ptr1Obj - first wrapped pointer
+ * ptr2Obj - second wrapped pointer
+ * resultP - where to store result.
+ *
+ * If both address and tag components are same, stores 1 in resultP. If
+ * address is same but not tags, stores -1. Otherwise stores 0.
+ *
+ * Returns:
+ * A Tcl return code.
+ */
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerObjCompare(Tcl_Interp *interp,
+                                                  Tcl_Obj *ptr1Obj,
+                                                  Tcl_Obj *ptr2Obj,
+                                                  int *resultP);
+
 #ifdef TCLH_SHORTNAMES
 #define PointerLibInit            Tclh_PointerLibInit
 #define PointerLibFinit           Tclh_PointerLibFinit
@@ -545,6 +565,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerCast(Tcl_Interp *interp,
 #define PointerSubtagRemove       Tclh_PointerSubtagRemove
 #define PointerSubtags            Tclh_PointerSubtags
 #define PointerCast               Tclh_PointerCast
+#define PointerObjCompare         Tclh_PointerObjCompare
 #endif
 
 #ifdef TCLH_IMPL
