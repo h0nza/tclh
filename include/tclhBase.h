@@ -115,8 +115,8 @@
 # define TCLH_ASSERT(bool_) (void) 0
 #elif TCLH_ASSERT_LEVEL == 1
 # define TCLH_ASSERT(bool_) (void)( (bool_) || (__debugbreak(), 0))
-#elif TCLSH_ENABLE_ASSERT == 2 && defined(_WIN32)
-#define TCLSH_ASSERT(bool_)                                             \
+#elif TCLH_ENABLE_ASSERT == 2 && defined(_WIN32)
+#define TCLH_ASSERT(bool_)                                             \
     (void)((bool_)                                                      \
            || (DebugOutput("Assertion (" #bool_                         \
                            ") failed at line " TCLH_MAKESTRINGLITERAL2( \
