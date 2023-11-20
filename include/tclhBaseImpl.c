@@ -403,9 +403,55 @@ Tclh_ErrorEncodingFromUtf8(Tcl_Interp *ip,
     return Tclh_ErrorInvalidValueStr(ip, limited, message);
 }
 
+Tclh_ReturnCode
+Tclh_ErrorErrnoError(Tcl_Interp *interp,
+                     int err,
+                     const char *message)
+{
+    if (interp) {
+        Tcl_Obj *objs[4];
+        char buf[256];
+        char *bufP;
+
+        objs[0] = Tcl_NewStringObj("CFFI", 4);
+        objs[1] = Tcl_NewStringObj("ERRNO", 5);
+        /* store as hex string. That is what try handlers should use */
+        objs[2] = Tcl_ObjPrintf("%u", err);
+        objs[3] = Tcl_NewStringObj(message ? message : "", -1);
+
+        buf[0] = 0;             /* Safety check against misconfig */
+
+#ifdef _WIN32
+        strerror_s(buf, sizeof(buf) / sizeof(buf[0]), (int) err);
+        bufP = buf;
+#else
+        /*
+         * This is tricky. See manpage for gcc/linux for the strerror_r
+         * to be selected. BUT Apple for example does not follow the same
+         * feature test macro conventions.
+         */
+#if _GNU_SOURCE || (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE < 200112L)
+        bufP = strerror_r((int) err, buf, sizeof(buf) / sizeof(buf[0]));
+        /* Returned bufP may or may not be buf! */
+#else
+        /* XSI/POSIX standard version */
+        strerror_r((int) err, buf, sizeof(buf) / sizeof(buf[0]));
+        bufP = buf;
+#endif
+#endif
+
+        if (message)
+            Tcl_AppendToObj(objs[3], " ", 1);
+        Tcl_AppendToObj(objs[3], bufP, -1);
+        Tcl_SetObjErrorCode(interp, Tcl_NewListObj(4, objs));
+        Tcl_SetObjResult(interp, objs[3]);
+    }
+    return TCL_ERROR;
+}
 
 
 #ifdef _WIN32
+
 Tcl_Obj *TclhMapWindowsError(
     DWORD winError,      /* Windows error code */
     HANDLE moduleHandle,        /* Handle to module containing error string.
@@ -473,7 +519,16 @@ Tclh_ErrorWindowsError(Tcl_Interp *interp,
                        unsigned int winerror,
                        const char *message)
 {
-    Tcl_Obj *msgObj = TclhMapWindowsError(winerror, NULL, message);
-    return TclhRecordError(interp, "WINERROR", msgObj);
+    if (interp) {
+        Tcl_Obj *objs[4];
+        objs[0] = Tcl_NewStringObj("CFFI", 4);
+        objs[1] = Tcl_NewStringObj("WIN32", 5);
+        /* store as hex string. That is what try handlers should use */
+        objs[2] = Tcl_ObjPrintf("%u", winerror);
+        objs[3] = TclhMapWindowsError(winerror, NULL, message);
+        Tcl_SetObjErrorCode(interp, Tcl_NewListObj(4, objs));
+        Tcl_SetObjResult(interp, objs[3]);
+    }
+    return TCL_ERROR;
 }
 #endif /* _WIN32 */
