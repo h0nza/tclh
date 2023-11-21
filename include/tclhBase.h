@@ -115,8 +115,8 @@
 # define TCLH_ASSERT(bool_) (void) 0
 #elif TCLH_ASSERT_LEVEL == 1
 # define TCLH_ASSERT(bool_) (void)( (bool_) || (__debugbreak(), 0))
-#elif TCLSH_ENABLE_ASSERT == 2 && defined(_WIN32)
-#define TCLSH_ASSERT(bool_)                                             \
+#elif TCLH_ENABLE_ASSERT == 2 && defined(_WIN32)
+#define TCLH_ASSERT(bool_)                                             \
     (void)((bool_)                                                      \
            || (DebugOutput("Assertion (" #bool_                         \
                            ") failed at line " TCLH_MAKESTRINGLITERAL2( \
@@ -289,7 +289,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_LibInit(Tcl_Interp *interp, Tclh_LibContext **tc
  * Reports an error that an object already exists.
  *
  * Parameters:
- * interp  - Tcl interpreter in which to report the error.
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
  * type    - String indicating type of object, e.g. *File*. Defaults to *Object*
  *           if passed as NULL.
  * searchObj - The object being searched for, e.g. the file name. This is
@@ -315,7 +315,7 @@ Tclh_ErrorExists(Tcl_Interp *interp,
  * Reports a generic error.
  *
  * Parameters:
- * interp - Tcl interpreter in which to report the error.
+ * interp - Tcl interpreter in which to report the error. May be NULL.
  * code   - String literal value to use for the error code. Defaults to
  *          *ERROR* if *NULL*.
  * message - Additional text to add to the error message. May be NULL.
@@ -339,7 +339,7 @@ Tclh_ErrorGeneric(Tcl_Interp *interp, const char *code, const char *message);
  * Reports an error where an string is not found or is not accessible.
  *
  * Parameters:
- * interp  - Tcl interpreter in which to report the error.
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
  * type    - String indicating type of object, e.g. *File*. Defaults to *Object*
  *           if passed as NULL.
  * string - The object being searched for, e.g. the file name. This is
@@ -364,7 +364,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorNotFoundStr(Tcl_Interp *interp,
  * Reports an error where an object is not found or is not accessible.
  *
  * Parameters:
- * interp  - Tcl interpreter in which to report the error.
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
  * type    - String indicating type of object, e.g. *File*. Defaults to *Object*
  *           if passed as NULL.
  * searchObj - The object being searched for, e.g. the file name. This is
@@ -389,7 +389,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorNotFound(Tcl_Interp *interp,
  * Reports the failure of an operation.
  *
  * Parameters:
- * interp  - Tcl interpreter in which to report the error.
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
  * oper    - String describing the operation, e.g. *delete*. May be passed
  *           as *NULL*.
  * operandObj - The object on which the operand was attempted, e.g. the file
@@ -414,7 +414,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorOperFailed(Tcl_Interp *interp,
  * Reports an invalid argument passed in to a command function.
  *
  * Parameters:
- * interp    - Tcl interpreter in which to report the error.
+ * interp    - Tcl interpreter in which to report the error. May be NULL.
  * badValue - The argument that was found to be invalid. This is
  *           included in the error message if not *NULL*.
  * message - Additional text to append to the standard error message. May be NULL.
@@ -435,7 +435,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorInvalidValueStr(Tcl_Interp *interp,
  * Reports an invalid argument passed in to a command function.
  *
  * Parameters:
- * interp    - Tcl interpreter in which to report the error.
+ * interp    - Tcl interpreter in which to report the error. May be NULL.
  * badArgObj - The object argument that was found to be invalid. This is
  *           included in the error message if not *NULL*.
  * message - Additional text to append to the standard error message. May be NULL.
@@ -456,7 +456,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorInvalidValue(Tcl_Interp *interp,
  * Reports a required option is not specified.
  *
  * Parameters:
- * interp  - Tcl interpreter in which to report the error.
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
  * optNameObj - The option name. May be NULL.
  * message - Additional text to append to the standard error message. May be
  * NULL.
@@ -477,7 +477,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorOptionMissingStr(Tcl_Interp *interp,
  * Reports no option value has been specified for an option to a command
  *
  * Parameters:
- * interp  - Tcl interpreter in which to report the error.
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
  * optNameObj - The option name for which the value is missing. May be NULL.
  * message - Additional text to append to the standard error message. May be
  * NULL.
@@ -498,7 +498,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorOptionValueMissing(Tcl_Interp *interp,
  * Reports an invalid number of arguments passed into a command function.
  *
  * Parameters:
- * interp - Tcl interpreter in which to report the error.
+ * interp - Tcl interpreter in which to report the error. May be NULL.
  * objc   - Number of elements in the objv[] array to include in the error message.
  * objv   - Array containing command arguments.
  * message - Additional text to add to the error message. May be NULL.
@@ -525,7 +525,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorNumArgs(Tcl_Interp *interp,
  * Reports an error where a value is of the wrong type.
  *
  * Parameters:
- * interp  - Tcl interpreter in which to report the error.
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
  * argObj  - The value in question. This is
  *           included in the error message if not *NULL*.
  * message - Additional text to append to the standard error message. May be *NULL*.
@@ -546,7 +546,7 @@ Tclh_ErrorWrongType(Tcl_Interp *interp, Tcl_Obj *argObj, const char *message);
  * Reports an error where an allocation failed.
  *
  * Parameters:
- * interp  - Tcl interpreter in which to report the error.
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
  * type    - String indicating type of object, e.g. *Memory*. Defaults to *Object*
  *           if passed as NULL.
  * message - Additional text to append to the standard error message. May be NULL.
@@ -566,7 +566,7 @@ Tclh_ErrorAllocation(Tcl_Interp *interp, const char *type, const char *message);
  * Reports an out-of-range error for integers.
  *
  * Parameters:
- * interp  - Tcl interpreter in which to report the error.
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
  * objP    - Value that is out of range. May be NULL.
  * low     - low end of permitted range (inclusive)
  * high    - high end of permitted range (inclusive)
@@ -584,7 +584,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorRange(Tcl_Interp *interp,
  * Reports an encoding failure converting from utf8
  *
  * Parameters:
- * interp  - Tcl interpreter in which to report the error.
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
  * encoding_status - an encoding status value as returned by Tcl_ExternalToUtf
  * utf8 - Tcl internal string that failed to be transformed
  * utf8Len - length of the string. If < 0, treated as nul terminated.
@@ -598,6 +598,26 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorEncodingFromUtf8(Tcl_Interp *ip,
                                            const char *utf8,
                                            Tcl_Size utf8Len);
 
+/* Function: Tclh_ErrorErrnoError
+ * Reports a errno error code message.
+ *
+ * Parameters:
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
+ * errno - errno value
+ * message - Additional text to append to the standard error message. May be NULL.
+ *
+ * If *interp* is not NULL, *message* (or empty string if NULL) followed by
+ * the string corresponding to the errno code is stored as the interpreter
+ * result. The interpreter *errorCode* is set to a list comprising of the words
+ * CFFI, ERRNO followed by the numeric error code, and the error string.
+ *
+ * Returns:
+ * TCL_ERROR - Always returns this value so caller can just pass on the return
+ *             value from this function.
+ */
+Tclh_ReturnCode
+Tclh_ErrorErrnoError(Tcl_Interp *interp, int err, const char *message);
+
 #ifdef _WIN32
 /* Function: Tclh_ErrorWindowsError
  * Reports a Windows error code message.
@@ -606,6 +626,11 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorEncodingFromUtf8(Tcl_Interp *ip,
  * interp  - Tcl interpreter in which to report the error.
  * winerror - Windows error codnfe
  * message - Additional text to append to the standard error message. May be NULL.
+ *
+ * If *interp* is not NULL, *message* (or empty string if NULL) followed by
+ * the string corresponding to the errno code is stored as the interpreter
+ * result. The interpreter *errorCode* is set to a list comprising of the words
+ * CFFI, ERRNO followed by the numeric error code, and the error string.
  *
  * Returns:
  * TCL_ERROR - Always returns this value so caller can just pass on the return
@@ -630,6 +655,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorWindowsError(Tcl_Interp *interp,
 #define ErrorAllocation Tclh_ErrorAllocation
 #define ErrorRange      Tclh_ErrorRange
 #define ErrorEncodingFromUtf8 Tclh_ErrorEncodingFromUtf8
+#define ErrorErrnoError Tclh_ErrorErrnoError
 #ifdef _WIN32
 #define ErrorWindowsError Tclh_ErrorWindowsError
 #endif
