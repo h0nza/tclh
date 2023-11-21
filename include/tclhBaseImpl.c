@@ -403,21 +403,32 @@ Tclh_ErrorEncodingFromUtf8(Tcl_Interp *ip,
     return Tclh_ErrorInvalidValueStr(ip, limited, message);
 }
 
+/*
+ * errnoname.c is from https://github.com/mentalisttraceur/errnoname.
+ * See the file for license (BSD Zero)
+ */
+#include "errnoname.c"
+
 Tclh_ReturnCode
 Tclh_ErrorErrnoError(Tcl_Interp *interp,
                      int err,
                      const char *message)
 {
     if (interp) {
-        Tcl_Obj *objs[4];
+        Tcl_Obj *objs[5];
         char buf[256];
         char *bufP;
+        const char *errnoSym;
 
         objs[0] = Tcl_NewStringObj("CFFI", 4);
         objs[1] = Tcl_NewStringObj("ERRNO", 5);
-        /* store as hex string. That is what try handlers should use */
-        objs[2] = Tcl_ObjPrintf("%u", err);
-        objs[3] = Tcl_NewStringObj(message ? message : "", -1);
+        errnoSym = errnoname(err);
+        if (errnoSym)
+            objs[2] = Tcl_NewStringObj(errnoSym, -1);
+        else
+            objs[2] = Tcl_ObjPrintf("%u", err);
+        objs[3] = Tcl_NewIntObj(err);
+        objs[4] = Tcl_NewStringObj(message ? message : "", -1);
 
         buf[0] = 0;             /* Safety check against misconfig */
 
@@ -441,16 +452,20 @@ Tclh_ErrorErrnoError(Tcl_Interp *interp,
 #endif
 
         if (message)
-            Tcl_AppendToObj(objs[3], " ", 1);
-        Tcl_AppendToObj(objs[3], bufP, -1);
-        Tcl_SetObjErrorCode(interp, Tcl_NewListObj(4, objs));
-        Tcl_SetObjResult(interp, objs[3]);
+            Tcl_AppendToObj(objs[4], " ", 1);
+        Tcl_AppendToObj(objs[4], bufP, -1);
+        Tcl_SetObjErrorCode(interp, Tcl_NewListObj(5, objs));
+        Tcl_SetObjResult(interp, objs[4]);
     }
     return TCL_ERROR;
 }
 
 
 #ifdef _WIN32
+
+#ifdef TCLH_MAP_WINERROR_SYM
+# include "tclhWinErrorSyms.c"
+#endif
 
 Tcl_Obj *TclhMapWindowsError(
     DWORD winError,      /* Windows error code */
@@ -523,8 +538,13 @@ Tclh_ErrorWindowsError(Tcl_Interp *interp,
         Tcl_Obj *objs[4];
         objs[0] = Tcl_NewStringObj("CFFI", 4);
         objs[1] = Tcl_NewStringObj("WIN32", 5);
-        /* store as hex string. That is what try handlers should use */
+#ifdef TCLH_MAP_WINERROR_SYM
+        const char *sym = winerrsym(winerror);
+        objs[2] =
+            sym ? Tcl_NewStringObj(sym, -1) : Tcl_ObjPrintf("%u", winerror);
+#else
         objs[2] = Tcl_ObjPrintf("%u", winerror);
+#endif
         objs[3] = TclhMapWindowsError(winerror, NULL, message);
         Tcl_SetObjErrorCode(interp, Tcl_NewListObj(4, objs));
         Tcl_SetObjResult(interp, objs[3]);
