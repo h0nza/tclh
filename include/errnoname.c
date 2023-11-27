@@ -54,7 +54,7 @@ char const * errnoname(int errno_)
     #ifdef EAI_FAMILY
         [EAI_FAMILY] = "EAI_FAMILY",
     #endif
-    #ifdef EAI_MEMORY
+    #if defined(EAI_MEMORY) && !defined(_WIN32)
         [EAI_MEMORY] = "EAI_MEMORY",
     #endif
     #ifdef EAI_NONAME
@@ -1473,7 +1473,7 @@ char const * errnoname(int errno_)
     #ifdef EAI_FAMILY
         case EAI_FAMILY: return "EAI_FAMILY";
     #endif
-    #ifdef EAI_MEMORY
+    #if defined(EAI_MEMORY) && !defined(_WIN32)
         case EAI_MEMORY: return "EAI_MEMORY";
     #endif
     #ifdef EAI_NONAME
