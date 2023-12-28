@@ -119,11 +119,26 @@ Tclh_HashIterate(Tcl_HashTable *htP,
 TCLH_LOCAL Tclh_ReturnCode
 Tclh_HashLookup(Tcl_HashTable *htP, const void *key, ClientData *valueP);
 
+/* Function: Tclh_HashRemove
+ * Removes an entry from a hash table, returning its value.
+ *
+ * Parameters:
+ * htP - hash table
+ * key - key to remove
+ * valueP - location to store the value. May be NULL if not of interest.
+ *
+ * Returns:
+ * *TCL_OK* if key existed in table, *TCL_ERROR* otherwise.
+ */
+TCLH_LOCAL Tclh_ReturnCode
+Tclh_HashRemove(Tcl_HashTable *htP, const void *key, ClientData *valueP);
+
 #ifdef TCLH_SHORTNAMES
 #define HashAdd          Tclh_HashAdd
 #define HashAddOrReplace Tclh_HashAddOrReplace
 #define HashIterate      Tclh_HashIterate
 #define HashLookup       Tclh_HashLookup
+#define HashRemove       Tclh_HashRemove
 #endif
 
 #ifdef TCLH_IMPL

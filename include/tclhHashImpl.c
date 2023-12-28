@@ -49,9 +49,23 @@ Tclh_HashLookup(Tcl_HashTable *htP, const void *key, ClientData *valueP)
             *valueP = Tcl_GetHashValue(heP);
         return TCL_OK;
     }
-    else
-        return TCL_ERROR;
+    return TCL_ERROR;
 }
+
+Tclh_ReturnCode
+Tclh_HashRemove(Tcl_HashTable *htP, const void *key, ClientData *valueP)
+{
+    Tcl_HashEntry *heP;
+    heP = Tcl_FindHashEntry(htP, key);
+    if (heP) {
+        if (valueP)
+            *valueP = Tcl_GetHashValue(heP);
+        Tcl_DeleteHashEntry(heP);
+        return TCL_OK;
+    }
+    return TCL_ERROR;
+}
+
 
 Tclh_Bool
 Tclh_HashIterate(Tcl_HashTable *htP,
