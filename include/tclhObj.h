@@ -74,6 +74,24 @@ TCLH_INLINE void Tclh_ObjClearPtr(Tcl_Obj **objPP) {
     }
 }
 
+/* Function: Tclh_FreeIfNoRefs
+ * Frees a Tcl_Obj if there are no references to it.
+ *
+ * On Tcl 9, this maps directly to the Tcl_BounceRefCount function.
+ *
+ * Parameters:
+ * objP - pointer to Tcl_Obj.
+ */
+TCLH_INLINE void Tclh_FreeIfNoRefs(Tcl_Obj *objP) {
+#if TCL_MAJOR_VERSION > 8
+    Tcl_BounceRefCount(objP);
+#else
+    /* This sequence is NOT a no-op! */
+    Tcl_IncrRefCount(objP);
+    Tcl_DecrRefCount(objP);
+#endif
+}
+
 /* Function: Tclh_ObjToRangedInt
  * Unwraps a Tcl_Obj into a Tcl_WideInt if it is within a specified range.
  *
