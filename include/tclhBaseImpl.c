@@ -476,7 +476,7 @@ Tcl_Obj *TclhMapWindowsError(
     Tcl_Size length;
     DWORD flags;
     WCHAR *winErrorMessagePtr = NULL;
-    Tcl_Obj *objPtr;
+    Tcl_Obj *objPtr = NULL;
     Tcl_DString ds;
 
     Tcl_DStringInit(&ds);
@@ -520,11 +520,21 @@ Tcl_Obj *TclhMapWindowsError(
         objPtr = Tcl_DStringToObj(&ds);
 #endif
         LocalFree(winErrorMessagePtr);
-    } else {
+    } else if (moduleHandle == NULL && (winError & 0xF0000000) == 0xD0000000) {
+        /* HRESULT wrapping NTSTATUS */
+        HANDLE ntdllH = LoadLibrary("NTDLL.DLL");
+        if (ntdllH) {
+            /* Turn off 0x10000000 to map HRESULT to NTSTATUS and recurse */
+            objPtr =
+                TclhMapWindowsError(winError & ~0x10000000, ntdllH, msgPtr);
+            FreeLibrary(ntdllH);
+        }
+    }
+    if (objPtr == NULL) {
         objPtr =
             Tcl_NewStringObj(Tcl_DStringValue(&ds), Tcl_DStringLength(&ds));
         Tcl_DStringFree(&ds);
-        Tcl_AppendPrintfToObj(objPtr, "Windows error code %ld", winError);
+        Tcl_AppendPrintfToObj(objPtr, "Error code %ld", winError);
     }
     return objPtr;
 }
