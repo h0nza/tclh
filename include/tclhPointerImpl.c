@@ -56,7 +56,7 @@ TCLH_INLINE Tclh_PointerTypeTag PointerTypeGet(Tcl_Obj *objP) {
 TCLH_INLINE void PointerTypeSet(Tcl_Obj *objP, Tclh_PointerTypeTag tag) {
     objP->internalRep.twoPtrValue.ptr2 = (void*)tag;
 }
-static int PointerTypeSame(Tclh_PointerTypeTag pointer_tag,
+static int PointerTypeMatchesExpected(Tclh_PointerTypeTag pointer_tag,
                            Tclh_PointerTypeTag expected_tag);
 static int PointerTypeCompatible(TclhPointerRegistry *registryP,
                                  Tclh_PointerTypeTag tag,
@@ -119,7 +119,7 @@ Tclh_PointerLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
 }
 
 static int
-PointerTypeSame(Tclh_PointerTypeTag pointer_tag,
+PointerTypeMatchesExpected(Tclh_PointerTypeTag pointer_tag,
                 Tclh_PointerTypeTag expected_tag)
 {
     if (pointer_tag == expected_tag || expected_tag == NULL)
@@ -494,7 +494,7 @@ TclhPointerRegister(Tcl_Interp *interp,
              * - both must have the same type tag
              * - both be counted or both single reference, and
              */
-            if (!PointerTypeSame(ptrRecP->tagObj, tag))
+            if (!PointerTypeMatchesExpected(ptrRecP->tagObj, tag))
                 return PointerTypeError(interp, ptrRecP->tagObj, tag);
             if (counted) {
                 if (ptrRecP->nRefs < 0)
@@ -555,7 +555,7 @@ PointerTypeCompatible(TclhPointerRegistry *registryP,
      * just keep a hard limit 10 on the depth of lookups
      */
     /* NOTE: on first go around ok for tag to be NULL. */
-    if (PointerTypeSame(tag, expected))
+    if (PointerTypeMatchesExpected(tag, expected))
         return 1;
     /* For NULL, if first did not match succeeding will not either  */
     if (tag == NULL)
@@ -569,7 +569,7 @@ PointerTypeCompatible(TclhPointerRegistry *registryP,
         /* For NULL, if first did not match succeeding will not either cut short */
         if (tag == NULL)
             return 0;
-        if (PointerTypeSame(tag, expected))
+        if (PointerTypeMatchesExpected(tag, expected))
             return 1;
     }
 
@@ -649,7 +649,7 @@ Tclh_PointerEnumerate(Tcl_Interp *interp,
          he != NULL; he = Tcl_NextHashEntry(&hSearch)) {
         void *pv                   = Tcl_GetHashKey(hTblPtr, he);
         TclhPointerRecord *ptrRecP = Tcl_GetHashValue(he);
-        if (PointerTypeSame(ptrRecP->tagObj, tag)) {
+        if (PointerTypeMatchesExpected(ptrRecP->tagObj, tag)) {
             Tcl_ListObjAppendElement(
                 NULL, resultObj, Tclh_PointerWrap(pv, ptrRecP->tagObj));
         }
@@ -907,7 +907,7 @@ Tclh_PointerCast(Tcl_Interp *interp,
         Tcl_HashEntry *he = Tcl_FindHashEntry(&registryP->pointers, pv);
         if (he) {
             ptrRecP = Tcl_GetHashValue(he);
-            if (!PointerTypeSame(oldTag, ptrRecP->tagObj)) {
+            if (!PointerTypeMatchesExpected(oldTag, ptrRecP->tagObj)) {
                 /* Pointer is registered but as a different type */
                 return PointerTypeError(interp, ptrRecP->tagObj, oldTag);
             }
