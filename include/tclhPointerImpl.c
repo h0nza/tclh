@@ -644,12 +644,30 @@ Tclh_PointerEnumerate(Tcl_Interp *interp,
     Tcl_HashTable *hTblPtr;
     Tcl_Obj *resultObj = Tcl_NewListObj(0, NULL);
 
+    /* 
+     * If tag NULL, match all
+     * If tag specified and not "", match the tag
+     * If tag is "", match only those without a tag
+     */
+    int getAll = 0;
+    if (tag == NULL)
+        getAll = 1;
+    else {
+        /* Tcl_GetCharLength will shimmer so GetStringFromObj */
+        Tcl_Size len;
+        (void)Tcl_GetStringFromObj(tag, &len);
+        if (len == 0)
+            tag = NULL;
+    }
+    /* Now tag == NULL -> only match records without a tag */
     hTblPtr   = &registryP->pointers;
     for (he = Tcl_FirstHashEntry(hTblPtr, &hSearch);
          he != NULL; he = Tcl_NextHashEntry(&hSearch)) {
         void *pv                   = Tcl_GetHashKey(hTblPtr, he);
         TclhPointerRecord *ptrRecP = Tcl_GetHashValue(he);
-        if (PointerTypeMatchesExpected(ptrRecP->tagObj, tag)) {
+        if (getAll || (tag == ptrRecP->tagObj)
+            || (tag != NULL
+                && PointerTypeMatchesExpected(ptrRecP->tagObj, tag))) {
             Tcl_ListObjAppendElement(
                 NULL, resultObj, Tclh_PointerWrap(pv, ptrRecP->tagObj));
         }
