@@ -235,7 +235,7 @@ Tclh_PointerUnregister(Tcl_Interp *interp,
  *             An error message is left in interp.
  */
 TCLH_LOCAL Tclh_ReturnCode
-Tclh_PointerUnregister(Tcl_Interp *interp,
+Tclh_PointerInvalidate(Tcl_Interp *interp,
                        Tclh_LibContext *tclhCtxP,
                        const void *pointer,
                        Tclh_PointerTypeTag expected_tag);
@@ -626,6 +626,8 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerObjCompare(Tcl_Interp *interp,
 #define PointerSubtags            Tclh_PointerSubtags
 #define PointerCast               Tclh_PointerCast
 #define PointerObjCompare         Tclh_PointerObjCompare
+#define PointerPin                Tclh_PointerPin
+#define PointerInvalidate         Tclh_PointerInvalidate
 #endif
 
 #ifdef TCLH_IMPL

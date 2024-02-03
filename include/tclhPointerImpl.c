@@ -479,6 +479,11 @@ TclhPointerRegister(Tcl_Interp *interp,
     if (pointer == NULL)
         return Tclh_ErrorInvalidValue(interp, NULL, "Attempt to register null pointer.");
 
+    if (tag && registration == TCLH_PINNED_POINTER) {
+        return Tclh_ErrorWrongType(
+            interp, NULL, "Attempt to pin a tagged pointer.");
+    }
+
     hTblPtr   = &registryP->pointers;
     he = Tcl_CreateHashEntry(hTblPtr, pointer, &newEntry);
 
@@ -513,7 +518,9 @@ TclhPointerRegister(Tcl_Interp *interp,
              */
             if (!PointerTypeMatchesExpected(ptrRecP->tagObj, tag))
                 return PointerTypeError(interp, ptrRecP->tagObj, tag);
-            switch (registration) {
+            /* Keep pinned pointers unchanged */
+            if (ptrRecP->nRefs != TCLH_POINTER_NREFS_MAX) {
+                switch (registration) {
                 case TCLH_UNCOUNTED_POINTER:
                     if (ptrRecP->nRefs >= 0) {
                         /* This is actually a counted or pinned pointer */
@@ -541,7 +548,7 @@ TclhPointerRegister(Tcl_Interp *interp,
                     /* Any registration converted to pinned */
                     ptrRecP->nRefs = TCLH_POINTER_NREFS_MAX;
                     break;
-
+                }
             }
         }
         if (objPP)
