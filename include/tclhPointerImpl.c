@@ -15,7 +15,13 @@
 typedef struct TclhPointerRecord {
     Tcl_Obj *tagObj;            /* Identifies the "type". May be NULL */
     int nRefs;                  /* Number of references to the pointer */
+#define TCLH_POINTER_NREFS_MAX INT_MAX
 } TclhPointerRecord;
+typedef enum TclhPointerRegistrationType {
+    TCLH_UNCOUNTED_POINTER,
+    TCLH_COUNTED_POINTER,
+    TCLH_PINNED_POINTER
+} TclhPointerRegistrationType;
 
 typedef struct TclhPointerRegistry {
     Tcl_HashTable pointers;/* Table of registered pointers */
@@ -419,16 +425,17 @@ PointerTypeError(Tcl_Interp *interp,
 static int
 PointerNotRegisteredError(Tcl_Interp *interp,
                           const void *p,
-                          Tclh_PointerTypeTag tag)
+                          Tclh_PointerTypeTag tag,
+                          const char *failureMode)
 {
     char addr[40];
-    char buf[100];
+    char buf[200];
     TclhPrintAddress(p, addr, sizeof(addr));
     snprintf(buf,
              sizeof(buf),
-             "Pointer %s^%s is not registered.",
+             "Pointer %s^%s is not %s.",
              addr,
-             tag ? Tcl_GetString(tag) : "");
+             tag ? Tcl_GetString(tag) : "", failureMode);
 
     return Tclh_ErrorGeneric(interp, "NOT_FOUND", buf);
 }
@@ -448,7 +455,7 @@ TclhPointerRegister(Tcl_Interp *interp,
                     void *pointer,
                     Tclh_PointerTypeTag tag,
                     Tcl_Obj **objPP,
-                    int counted)
+                    TclhPointerRegistrationType registration)
 {
     Tclh_ReturnCode ret;
     if (tclhCtxP == NULL) {
@@ -485,7 +492,17 @@ TclhPointerRegister(Tcl_Interp *interp,
             else
                 ptrRecP->tagObj = NULL;
             /* -1 => uncounted pointer (only single reference allowed) */
-            ptrRecP->nRefs = counted ? 1 : -1;
+            switch (registration) {
+                case TCLH_UNCOUNTED_POINTER:
+                    ptrRecP->nRefs = -1;
+                    break;
+                case TCLH_COUNTED_POINTER:
+                    ptrRecP->nRefs = 1;
+                    break;
+                case TCLH_PINNED_POINTER:
+                    ptrRecP->nRefs = TCLH_POINTER_NREFS_MAX;
+                    break;
+            }
             Tcl_SetHashValue(he, ptrRecP);
         } else {
             ptrRecP = Tcl_GetHashValue(he);
@@ -496,23 +513,35 @@ TclhPointerRegister(Tcl_Interp *interp,
              */
             if (!PointerTypeMatchesExpected(ptrRecP->tagObj, tag))
                 return PointerTypeError(interp, ptrRecP->tagObj, tag);
-            if (counted) {
-                if (ptrRecP->nRefs < 0)
-                    return Tclh_ErrorExists(
-                        interp,
-                        "Registered uncounted pointer",
-                        NULL,
-                        "Attempt to register a counted pointer.");
-                ptrRecP->nRefs += 1;
-            }
-            else {
-                if (ptrRecP->nRefs >= 0)
-                    return Tclh_ErrorExists(
-                        interp,
-                        "Registered counted pointer",
-                        NULL,
-                        "Attempt to register an uncounted pointer.");
-                /* Note ref count NOT incremented - not a counted pointer */
+            switch (registration) {
+                case TCLH_UNCOUNTED_POINTER:
+                    if (ptrRecP->nRefs >= 0) {
+                        /* This is actually a counted or pinned pointer */
+                        return Tclh_ErrorExists(
+                            interp,
+                            "Registered counted pointer",
+                            NULL,
+                            "Attempt to register an uncounted pointer.");
+                    }
+                    /* Note ref count unchanged - not a counted pointer */
+                    break;
+                case TCLH_COUNTED_POINTER:
+                    if (ptrRecP->nRefs < 0) {
+                        /* This is an uncounted pointer */
+                        return Tclh_ErrorExists(
+                            interp,
+                            "Registered uncounted pointer",
+                            NULL,
+                            "Attempt to register a counted pointer.");
+                    }
+                    if (ptrRecP->nRefs < TCLH_POINTER_NREFS_MAX)
+                        ptrRecP->nRefs += 1;
+                    break;
+                case TCLH_PINNED_POINTER:
+                    /* Any registration converted to pinned */
+                    ptrRecP->nRefs = TCLH_POINTER_NREFS_MAX;
+                    break;
+
             }
         }
         if (objPP)
@@ -531,7 +560,8 @@ Tclh_PointerRegister(Tcl_Interp *interp,
                      Tclh_PointerTypeTag tag,
                      Tcl_Obj **objPP)
 {
-    return TclhPointerRegister(interp, tclhCtxP, pointer, tag, objPP, 0);
+    return TclhPointerRegister(
+        interp, tclhCtxP, pointer, tag, objPP, TCLH_UNCOUNTED_POINTER);
 }
 
 Tclh_ReturnCode
@@ -541,7 +571,18 @@ Tclh_PointerRegisterCounted(Tcl_Interp *interp,
                             Tclh_PointerTypeTag tag,
                             Tcl_Obj **objPP)
 {
-    return TclhPointerRegister(interp, tclhCtxP, pointer, tag, objPP, 1);
+    return TclhPointerRegister(
+        interp, tclhCtxP, pointer, tag, objPP, TCLH_COUNTED_POINTER);
+}
+
+Tclh_ReturnCode
+Tclh_PointerPin(Tcl_Interp *interp,
+                Tclh_LibContext *tclhCtxP,
+                void *pointer,
+                Tcl_Obj **objPP)
+{
+    return TclhPointerRegister(
+        interp, tclhCtxP, pointer, NULL, objPP, TCLH_PINNED_POINTER);
 }
 
 static int
@@ -581,7 +622,7 @@ PointerVerifyOrUnregister(Tcl_Interp *interp,
                           Tclh_LibContext *tclhCtxP,
                           const void *pointer,
                           Tclh_PointerTypeTag tag,
-                          int unregister)
+                          int unrefCount)
 {
     if (tclhCtxP == NULL) {
         if (interp == NULL || Tclh_LibInit(interp, &tclhCtxP) != TCL_OK)
@@ -602,18 +643,26 @@ PointerVerifyOrUnregister(Tcl_Interp *interp,
         if (!PointerTypeCompatible(registryP, ptrRecP->tagObj, tag)) {
             return PointerTypeError(interp, ptrRecP->tagObj, tag);
         }
-        if (unregister) {
-            if (ptrRecP->nRefs <= 1) {
-                /*  Either uncounted or ref count will reach 0 */
+        if (unrefCount) {
+            if (ptrRecP->nRefs == TCLH_POINTER_NREFS_MAX) {
+                /* Pinned pointers only affected if ref decrement is MAX */
+                if (unrefCount == TCLH_POINTER_NREFS_MAX) {
+                    TclhPointerRecordFree(ptrRecP);
+                    Tcl_DeleteHashEntry(he);
+                }
+            } else if (ptrRecP->nRefs <= unrefCount) {
                 TclhPointerRecordFree(ptrRecP);
                 Tcl_DeleteHashEntry(he);
+            } else {
+                ptrRecP->nRefs -= unrefCount;
             }
-            else
-                ptrRecP->nRefs -= 1;
         }
         return TCL_OK;
     }
-    return PointerNotRegisteredError(interp, pointer, tag);
+    if (unrefCount == TCLH_POINTER_NREFS_MAX)
+        return TCL_OK; /* Invalidate, no error if pointer not registered */
+    else
+        return PointerNotRegisteredError(interp, pointer, tag, "registered");
 }
 
 Tclh_ReturnCode
@@ -623,6 +672,16 @@ Tclh_PointerUnregister(Tcl_Interp *interp,
                        Tclh_PointerTypeTag tag)
 {
     return PointerVerifyOrUnregister(interp, tclhCtxP, pointer, tag, 1);
+}
+
+Tclh_ReturnCode
+Tclh_PointerInvalidate(Tcl_Interp *interp,
+                       Tclh_LibContext *tclhCtxP,
+                       const void *pointer,
+                       Tclh_PointerTypeTag tag)
+{
+    return PointerVerifyOrUnregister(
+        interp, tclhCtxP, pointer, tag, TCLH_POINTER_NREFS_MAX);
 }
 
 Tcl_Obj *
