@@ -925,8 +925,8 @@ Tclh_PointerCast(Tcl_Interp *interp,
         Tcl_HashEntry *he = Tcl_FindHashEntry(&registryP->pointers, pv);
         if (he) {
             ptrRecP = Tcl_GetHashValue(he);
-            if (!PointerTypeMatchesExpected(oldTag, ptrRecP->tagObj)) {
-                /* Pointer is registered but as a different type */
+            if (!PointerTypeCompatible(registryP, oldTag, ptrRecP->tagObj)
+                && !PointerTypeCompatible(registryP, ptrRecP->tagObj, oldTag)) {
                 return PointerTypeError(interp, ptrRecP->tagObj, oldTag);
             }
         }
