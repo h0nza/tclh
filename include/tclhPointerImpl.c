@@ -98,6 +98,22 @@ TclhCleanupPointerRegistry(ClientData clientData, Tcl_Interp *interp)
     Tcl_Free((void *)registryP);
 }
 
+static TclhPointerRegistry *
+TclhPointerGetRegistry(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
+{
+    if (tclhCtxP == NULL) {
+        if (interp == NULL || Tclh_LibInit(interp, &tclhCtxP) != TCL_OK)
+            return NULL;
+    }
+    if (tclhCtxP->pointerRegistryP == NULL) {
+        (void) Tclh_ErrorGeneric(
+            interp, NULL, "Internal error: Tclh context not initialized.");
+        return NULL;
+    }
+    return tclhCtxP->pointerRegistryP;
+}
+
+
 Tclh_ReturnCode
 Tclh_PointerLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
 {
@@ -172,7 +188,6 @@ Tclh_PointerUnwrapTagged(Tcl_Interp *interp,
                          void **pvP,
                          Tclh_PointerTypeTag expectedTag)
 {
-    Tclh_ReturnCode ret;
     Tclh_PointerTypeTag tag;
     void *pv;
 
@@ -192,19 +207,10 @@ Tclh_PointerUnwrapTagged(Tcl_Interp *interp,
     *   - the unwrapped pointer is not NULL or its tag is not NULL
     */
     if (expectedTag && (pv || tag)) {
-        if (tclhCtxP == NULL) {
-            if (interp == NULL)
-                return TCL_ERROR;
-            ret = Tclh_LibInit(interp, &tclhCtxP);
-            if (ret != TCL_OK)
-                return ret;
-        }
-        if (tclhCtxP->pointerRegistryP == NULL) {
-            return Tclh_ErrorGeneric(
-                interp, NULL, "Internal error: Tclh context not initialized.");
-        }
-
-        TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
+        TclhPointerRegistry *registryP =
+            TclhPointerGetRegistry(interp, tclhCtxP);
+        if (registryP == NULL)
+            return TCL_ERROR;
 
         if (tag != expectedTag /* Avoid cost of PointerTypeCompatible */
             && !PointerTypeCompatible(registryP, tag, expectedTag)) {
@@ -413,7 +419,7 @@ invalid_value: /* s must point to value */
  * Pointer registry implementation.
  */
 
-static int
+static Tclh_ReturnCode
 PointerTypeError(Tcl_Interp *interp,
                  Tclh_PointerTypeTag registered,
                  Tclh_PointerTypeTag tag)
@@ -422,7 +428,7 @@ PointerTypeError(Tcl_Interp *interp,
         interp, NULL, "Pointer tag does not match registered tag.");
 }
 
-static int
+static Tclh_ReturnCode
 PointerNotRegisteredError(Tcl_Interp *interp,
                           const void *p,
                           Tclh_PointerTypeTag tag,
@@ -457,20 +463,10 @@ TclhPointerRegister(Tcl_Interp *interp,
                     Tcl_Obj **objPP,
                     TclhPointerRegistrationType registration)
 {
-    Tclh_ReturnCode ret;
-    if (tclhCtxP == NULL) {
-        if (interp == NULL)
-            return TCL_ERROR;
-        ret = Tclh_LibInit(interp, &tclhCtxP);
-        if (ret != TCL_OK)
-            return ret;
-    }
-    if (tclhCtxP->pointerRegistryP == NULL) {
-        return Tclh_ErrorGeneric(
-            interp, NULL, "Internal error: Tclh context not initialized.");
-    }
+    TclhPointerRegistry *registryP = TclhPointerGetRegistry(interp, tclhCtxP);
+    if (registryP == NULL)
+        return TCL_ERROR;
 
-    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
     Tcl_HashTable *hTblPtr;
     Tcl_HashEntry *he;
     int            newEntry;
@@ -631,16 +627,9 @@ PointerVerifyOrUnregister(Tcl_Interp *interp,
                           Tclh_PointerTypeTag tag,
                           int unrefCount)
 {
-    if (tclhCtxP == NULL) {
-        if (interp == NULL || Tclh_LibInit(interp, &tclhCtxP) != TCL_OK)
-            return TCL_ERROR;
-    }
-    if (tclhCtxP->pointerRegistryP == NULL) {
-        return Tclh_ErrorGeneric(
-            interp, NULL, "Internal error: Tclh context not initialized.");
-    }
-
-    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
+    TclhPointerRegistry *registryP = TclhPointerGetRegistry(interp, tclhCtxP);
+    if (registryP == NULL)
+        return TCL_ERROR;
 
     Tcl_HashEntry *he;
 
@@ -696,14 +685,10 @@ Tclh_PointerEnumerate(Tcl_Interp *interp,
                       Tclh_LibContext *tclhCtxP,
                       Tclh_PointerTypeTag tag)
 {
-    if (tclhCtxP == NULL) {
-        if (interp == NULL || Tclh_LibInit(interp, &tclhCtxP) != TCL_OK)
+    TclhPointerRegistry *registryP = TclhPointerGetRegistry(interp, tclhCtxP);
+    if (registryP == NULL) {
             return Tcl_NewObj();
     }
-    if (tclhCtxP->pointerRegistryP == NULL) {
-            return Tcl_NewObj();
-    }
-    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
 
     Tcl_HashEntry *he;
     Tcl_HashSearch hSearch;
@@ -866,15 +851,10 @@ Tclh_PointerSubtagDefine(Tcl_Interp *interp,
                          Tclh_PointerTypeTag subtagObj,
                          Tclh_PointerTypeTag supertagObj)
 {
-    if (tclhCtxP == NULL) {
-        if (interp == NULL || Tclh_LibInit(interp, &tclhCtxP) != TCL_OK)
-            return TCL_ERROR;
-    }
-    if (tclhCtxP->pointerRegistryP == NULL) {
-        return Tclh_ErrorGeneric(
-            interp, NULL, "Internal error: Tclh context not initialized.");
-    }
-    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
+    TclhPointerRegistry *registryP = TclhPointerGetRegistry(interp, tclhCtxP);
+    if (registryP == NULL)
+        return TCL_ERROR;
+
     int tclResult;
     const char *subtag;
 
@@ -895,15 +875,10 @@ Tclh_PointerSubtagRemove(Tcl_Interp *interp,
                          Tclh_LibContext *tclhCtxP,
                          Tclh_PointerTypeTag tagObj)
 {
-    if (tclhCtxP == NULL) {
-        if (interp == NULL || Tclh_LibInit(interp, &tclhCtxP) != TCL_OK)
-            return TCL_ERROR;
-    }
-    if (tclhCtxP->pointerRegistryP == NULL) {
-        return Tclh_ErrorGeneric(
-            interp, NULL, "Internal error: Tclh context not initialized.");
-    }
-    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
+    TclhPointerRegistry *registryP = TclhPointerGetRegistry(interp, tclhCtxP);
+    if (registryP == NULL)
+        return TCL_ERROR;
+
     Tcl_HashEntry *he;
 
     if (tagObj) {
@@ -924,14 +899,9 @@ Tclh_PointerSubtags(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
     Tcl_Obj *objP;
 
     objP = Tcl_NewListObj(0, NULL);
-    if (tclhCtxP == NULL) {
-        if (interp == NULL || Tclh_LibInit(interp, &tclhCtxP) != TCL_OK)
-            return objP;
-    }
-    if (tclhCtxP->pointerRegistryP == NULL) {
+    TclhPointerRegistry *registryP = TclhPointerGetRegistry(interp, tclhCtxP);
+    if (registryP == NULL)
         return objP;
-    }
-    TclhPointerRegistry *registryP = tclhCtxP->pointerRegistryP;
 
     Tcl_HashEntry *heP;
     Tcl_HashTable *htP;
@@ -972,20 +942,8 @@ Tclh_PointerCast(Tcl_Interp *interp,
     if (tclResult != TCL_OK)
         return tclResult;
 
-    /*
-     * Validate that if registered, it is registered correctly.
-     * Note it is NOT an error if registry and interp are both NULL.
-     * It simply means it is not a registered pointer and the registration
-     * does not need to be updated.
-     */
-
-    TclhPointerRegistry *registryP = NULL;
-    if (tclhCtxP)
-        registryP = tclhCtxP->pointerRegistryP;
-    else {
-        if (interp && Tclh_LibInit(interp, &tclhCtxP) == TCL_OK)
-            registryP = tclhCtxP->pointerRegistryP;
-    }
+    /* Validate that if registered, it is registered correctly. */
+    TclhPointerRegistry *registryP = TclhPointerGetRegistry(interp, tclhCtxP);
     if (registryP) {
         TclhPointerRecord *ptrRecP = NULL;
         Tcl_HashEntry *he = Tcl_FindHashEntry(&registryP->pointers, pv);
@@ -1017,5 +975,148 @@ Tclh_PointerCast(Tcl_Interp *interp,
     }
 
     *castPtrObj = Tclh_PointerWrap(pv, newTag);
+    return TCL_OK;
+}
+
+static int
+PointerTagsSame(Tclh_PointerTypeTag tagA, Tclh_PointerTypeTag tagB)
+{
+    if (tagA == tagB)
+        return 1;
+    if (tagA == NULL || tagB == NULL)
+        return 0;
+    return !strcmp(Tcl_GetString(tagA), Tcl_GetString(tagB));
+}
+
+static int
+PointerTagIsAncestor(TclhPointerRegistry *registryP,
+                             Tclh_PointerTypeTag tag,
+                             Tclh_PointerTypeTag ancestor)
+{
+    if (ancestor == NULL)
+        return 1; /* ancestor is void*. All tags can be implicitly cast to it */
+    if (tag == NULL)
+        return 0;
+
+    /*
+     * Recursively look for an ancestor. Rather than trying to detect loops
+     * by recording history just keep a hard limit 10 on the depth of lookups
+     */
+    int i;
+    for (i = 0; i < 10; ++i) {
+        Tcl_HashEntry *he;
+        he = Tcl_FindHashEntry(&registryP->castables, Tcl_GetString(tag));
+        if (he == NULL)
+            return 0;/* No super type */
+        tag = Tcl_GetHashValue(he);
+        /* For NULL, if first did not match succeeding will not either cut short */
+        if (tag == NULL)
+            return 0;
+        if (PointerTagsSame(tag, ancestor))
+            return 1;
+    }
+
+    return 0;
+
+}
+
+static Tclh_PointerTagRelation
+PointerTagCompare(TclhPointerRegistry *registryP,
+                  Tclh_PointerTypeTag tag,
+                  Tclh_PointerTypeTag expectedTag)
+{
+    if (tag == expectedTag)
+        return TCLH_TAG_RELATION_EQUAL;
+    if (expectedTag == NULL)
+        return TCLH_TAG_RELATION_IMPLICITLY_CASTABLE;
+    if (tag == NULL)
+        return TCLH_TAG_RELATION_EXPLICITLY_CASTABLE;
+    if (!strcmp(Tcl_GetString(tag), Tcl_GetString(expectedTag)))
+        return TCLH_TAG_RELATION_EQUAL;
+    if (PointerTagIsAncestor(registryP, tag, expectedTag))
+        return TCLH_TAG_RELATION_IMPLICITLY_CASTABLE;
+    if (PointerTagIsAncestor(registryP, expectedTag, tag))
+        return TCLH_TAG_RELATION_EXPLICITLY_CASTABLE;
+    return TCLH_TAG_RELATION_UNRELATED;
+}
+
+static Tclh_PointerRegistrationStatus
+PointerRegistrationStatus(
+    TclhPointerRegistry *registryP,
+    void *pv,
+    Tclh_PointerTypeTag tag
+)
+{
+    Tcl_HashEntry *he;
+
+    he = Tcl_FindHashEntry(&registryP->pointers, pv);
+    if (he == NULL)
+        return TCLH_POINTER_REGISTRATION_MISSING;
+
+    TclhPointerRecord *ptrRecP = Tcl_GetHashValue(he);
+    switch (PointerTagCompare(registryP, tag, ptrRecP->tagObj)) {
+        case TCLH_TAG_RELATION_EQUAL:
+            return TCLH_POINTER_REGISTRATION_OK;
+        case TCLH_TAG_RELATION_IMPLICITLY_CASTABLE:
+            return TCLH_POINTER_REGISTRATION_DERIVED;
+        default:
+            return TCLH_POINTER_REGISTRATION_WRONGTAG;
+    }
+}
+
+int
+Tclh_PointerRegistered(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, void *pv)
+{
+    TclhPointerRegistry *registryP = TclhPointerGetRegistry(interp, tclhCtxP);
+    if (registryP == NULL)
+        return 0;
+    Tcl_HashEntry *he;
+    he = Tcl_FindHashEntry(&registryP->pointers, pv);
+    return he != NULL;
+}
+
+Tclh_ReturnCode
+Tclh_PointerRegistrationAffirm(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, void *pv)
+{
+    if (Tclh_PointerRegistered(interp, tclhCtxP, pv))
+        return TCL_OK;
+    return PointerNotRegisteredError(interp, pv, NULL, "registered");
+}
+
+Tclh_ReturnCode
+Tclh_PointerObjDissect(Tcl_Interp *interp,
+                       Tclh_LibContext *tclhCtxP,
+                       Tcl_Obj *ptrObj,
+                       Tclh_PointerTypeTag expectedTag,
+                       void **pvP,
+                       Tclh_PointerTypeTag *ptrTagP,
+                       Tclh_PointerTagRelation *tagMatchP,
+                       Tclh_PointerRegistrationStatus *registeredP)
+{
+    Tclh_PointerTypeTag tag;
+    void *pv;
+
+    /* Try converting Tcl_Obj internal rep */
+    if (ptrObj->typePtr != &gPointerType) {
+        if (SetPointerFromAny(interp, ptrObj) != TCL_OK)
+            return TCL_ERROR;
+    }
+
+    TclhPointerRegistry *registryP = TclhPointerGetRegistry(interp, tclhCtxP);
+    if (registryP == NULL)
+        return TCL_ERROR;
+
+    tag = PointerTypeGet(ptrObj);
+    pv  = PointerValueGet(ptrObj);
+
+    if (ptrTagP)
+        *ptrTagP = tag;
+
+    if (tagMatchP)
+        *tagMatchP = PointerTagCompare(registryP, tag, expectedTag);
+
+    if (registeredP)
+        *registeredP = PointerRegistrationStatus(registryP, pv, tag);
+
     return TCL_OK;
 }
