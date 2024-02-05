@@ -510,9 +510,11 @@ TclhPointerRegister(Tcl_Interp *interp,
             /*
              * If already existing, existing and passed-in pointer must
              * - both must have the same type tag or implicitly castable
-             * - both be counted or both single reference, and
+             * - both be counted or both single reference.
+             * An exception is pointer is being pinned, its tag is ignored.
              */
-            if (!PointerTypeCompatible(registryP, tag, ptrRecP->tagObj))
+            if (registration != TCLH_PINNED_POINTER
+                && !PointerTypeCompatible(registryP, tag, ptrRecP->tagObj))
                 return PointerTypeError(interp, ptrRecP->tagObj, tag);
             /* Keep pinned pointers unchanged */
             if (ptrRecP->nRefs != TCLH_POINTER_NREFS_MAX) {
@@ -543,6 +545,10 @@ TclhPointerRegister(Tcl_Interp *interp,
                 case TCLH_PINNED_POINTER:
                     /* Any registration converted to pinned */
                     ptrRecP->nRefs = TCLH_POINTER_NREFS_MAX;
+                    if (ptrRecP->tagObj) {
+                        Tcl_DecrRefCount(ptrRecP->tagObj);
+                        ptrRecP->tagObj = NULL;
+                    }
                     break;
                 }
             }
@@ -620,12 +626,42 @@ PointerTypeCompatible(TclhPointerRegistry *registryP,
     return 0;
 }
 
+Tclh_ReturnCode
+Tclh_PointerUnregister(Tcl_Interp *interp,
+                       Tclh_LibContext *tclhCtxP,
+                       const void *pointer)
+{
+    TclhPointerRegistry *registryP = TclhPointerGetRegistry(interp, tclhCtxP);
+    if (registryP == NULL)
+        return TCL_ERROR;
+
+    Tcl_HashEntry *he;
+
+    he = Tcl_FindHashEntry(&registryP->pointers, pointer);
+    if (he) {
+        TclhPointerRecord *ptrRecP = Tcl_GetHashValue(he);
+        /* Pinned pointers stay pinned */
+        if (ptrRecP->nRefs != TCLH_POINTER_NREFS_MAX) {
+            if (ptrRecP->nRefs <= 1) {
+                TclhPointerRecordFree(ptrRecP);
+                Tcl_DeleteHashEntry(he);
+            }
+        else {
+            ptrRecP->nRefs -= 1;
+        }
+        }
+        return TCL_OK;
+    }
+    else
+        return PointerNotRegisteredError(interp, pointer, NULL, "registered");
+}
+
 static Tclh_ReturnCode
-PointerVerifyOrUnregister(Tcl_Interp *interp,
-                          Tclh_LibContext *tclhCtxP,
-                          const void *pointer,
-                          Tclh_PointerTypeTag tag,
-                          int unrefCount)
+PointerVerifyOrUnregisterTagged(Tcl_Interp *interp,
+                                Tclh_LibContext *tclhCtxP,
+                                const void *pointer,
+                                Tclh_PointerTypeTag tag,
+                                int unrefCount)
 {
     TclhPointerRegistry *registryP = TclhPointerGetRegistry(interp, tclhCtxP);
     if (registryP == NULL)
@@ -662,21 +698,21 @@ PointerVerifyOrUnregister(Tcl_Interp *interp,
 }
 
 Tclh_ReturnCode
-Tclh_PointerUnregister(Tcl_Interp *interp,
+Tclh_PointerUnregisterTagged(Tcl_Interp *interp,
                        Tclh_LibContext *tclhCtxP,
                        const void *pointer,
                        Tclh_PointerTypeTag tag)
 {
-    return PointerVerifyOrUnregister(interp, tclhCtxP, pointer, tag, 1);
+    return PointerVerifyOrUnregisterTagged(interp, tclhCtxP, pointer, tag, 1);
 }
 
 Tclh_ReturnCode
-Tclh_PointerInvalidate(Tcl_Interp *interp,
+Tclh_PointerInvalidateTagged(Tcl_Interp *interp,
                        Tclh_LibContext *tclhCtxP,
                        const void *pointer,
                        Tclh_PointerTypeTag tag)
 {
-    return PointerVerifyOrUnregister(
+    return PointerVerifyOrUnregisterTagged(
         interp, tclhCtxP, pointer, tag, TCLH_POINTER_NREFS_MAX);
 }
 
@@ -727,12 +763,12 @@ Tclh_PointerEnumerate(Tcl_Interp *interp,
 }
 
 Tclh_ReturnCode
-Tclh_PointerVerify(Tcl_Interp *interp,
+Tclh_PointerVerifyTagged(Tcl_Interp *interp,
                    Tclh_LibContext *tclhCtxP,
                    const void *pointer,
                    Tclh_PointerTypeTag tag)
 {
-    return PointerVerifyOrUnregister(interp, tclhCtxP, pointer, tag, 0);
+    return PointerVerifyOrUnregisterTagged(interp, tclhCtxP, pointer, tag, 0);
 }
 
 Tclh_ReturnCode
@@ -748,7 +784,7 @@ Tclh_PointerObjUnregister(Tcl_Interp *interp,
     tclResult = Tclh_PointerUnwrapTagged(interp, tclhCtxP, objP, &pv, tag);
     if (tclResult == TCL_OK) {
         if (pv != NULL)
-            tclResult = Tclh_PointerUnregister(interp, tclhCtxP, pv, tag);
+            tclResult = Tclh_PointerUnregisterTagged(interp, tclhCtxP, pv, tag);
         if (tclResult == TCL_OK && pointerP != NULL)
             *pointerP = pv;
     }
@@ -778,9 +814,9 @@ PointerObjVerifyOrUnregisterAnyOf(Tcl_Interp *interp,
     tclResult = TclhUnwrapAnyOfVA(interp, tclhCtxP, objP, &pv, &tag, args);
     if (tclResult == TCL_OK) {
         if (unregister)
-            tclResult = Tclh_PointerUnregister(interp, tclhCtxP, pv, tag);
+            tclResult = Tclh_PointerUnregisterTagged(interp, tclhCtxP, pv, tag);
         else
-            tclResult = Tclh_PointerVerify(interp, tclhCtxP, pv, tag);
+            tclResult = Tclh_PointerVerifyTagged(interp, tclhCtxP, pv, tag);
         if (tclResult == TCL_OK && pointerP != NULL)
             *pointerP = pv;
     }
@@ -818,7 +854,7 @@ Tclh_PointerObjVerify(Tcl_Interp *interp,
         if (pv == NULL)
             tclResult = Tclh_ErrorInvalidValue(interp, NULL, "Pointer is NULL.");
         else {
-            tclResult = Tclh_PointerVerify(interp, tclhCtxP, pv, tag);
+            tclResult = Tclh_PointerVerifyTagged(interp, tclhCtxP, pv, tag);
             if (tclResult == TCL_OK) {
                 if (pointerP)
                     *pointerP = pv;
@@ -1067,6 +1103,8 @@ PointerRegistrationStatus(
 int
 Tclh_PointerRegistered(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, void *pv)
 {
+    if (pv == NULL)
+        return 0;
     TclhPointerRegistry *registryP = TclhPointerGetRegistry(interp, tclhCtxP);
     if (registryP == NULL)
         return 0;
@@ -1076,8 +1114,10 @@ Tclh_PointerRegistered(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, void *pv)
 }
 
 Tclh_ReturnCode
-Tclh_PointerRegistrationAffirm(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, void *pv)
+Tclh_PointerVerify(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, void *pv)
 {
+    if (pv == NULL)
+        return Tclh_ErrorInvalidValue(interp, NULL, "Pointer is NULL.");
     if (Tclh_PointerRegistered(interp, tclhCtxP, pv))
         return TCL_OK;
     return PointerNotRegisteredError(interp, pv, NULL, "registered");
