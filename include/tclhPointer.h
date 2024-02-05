@@ -672,7 +672,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerObjCompare(Tcl_Interp *interp,
  * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
  *            the Tclh context associated with the interpreter is used.
  * ptrObj   - Tcl_Obj containing a pointer value to dissect.
- * expectedPtrTag - Type tag for the pointer. Ignored if *ptrTagMatchP* is NULL.
+ * expectedPtrTag - Type tag for the pointer. Ignored if *tagMatchP* is NULL.
  * pvP      - If not NULL, the pointer value from objP is stored here
  *            on success.
  * ptrTagP  - location to store the pointer tag.

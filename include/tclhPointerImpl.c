@@ -509,10 +509,10 @@ TclhPointerRegister(Tcl_Interp *interp,
             ptrRecP = Tcl_GetHashValue(he);
             /*
              * If already existing, existing and passed-in pointer must
-             * - both must have the same type tag
+             * - both must have the same type tag or implicitly castable
              * - both be counted or both single reference, and
              */
-            if (!PointerTypeMatchesExpected(ptrRecP->tagObj, tag))
+            if (!PointerTypeCompatible(registryP, tag, ptrRecP->tagObj))
                 return PointerTypeError(interp, ptrRecP->tagObj, tag);
             /* Keep pinned pointers unchanged */
             if (ptrRecP->nRefs != TCLH_POINTER_NREFS_MAX) {
@@ -636,7 +636,7 @@ PointerVerifyOrUnregister(Tcl_Interp *interp,
     he = Tcl_FindHashEntry(&registryP->pointers, pointer);
     if (he) {
         TclhPointerRecord *ptrRecP = Tcl_GetHashValue(he);
-        if (!PointerTypeCompatible(registryP, ptrRecP->tagObj, tag)) {
+        if (!PointerTypeCompatible(registryP, tag, ptrRecP->tagObj)) {
             return PointerTypeError(interp, ptrRecP->tagObj, tag);
         }
         if (unrefCount) {
@@ -1108,6 +1108,9 @@ Tclh_PointerObjDissect(Tcl_Interp *interp,
 
     tag = PointerTypeGet(ptrObj);
     pv  = PointerValueGet(ptrObj);
+
+    if (pvP)
+        *pvP = pv;
 
     if (ptrTagP)
         *ptrTagP = tag;
