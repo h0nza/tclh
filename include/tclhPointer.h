@@ -725,6 +725,66 @@ Tclh_PointerObjDissect(Tcl_Interp *interp,
                        Tclh_PointerTagRelation *tagMatchP,
                        Tclh_PointerRegistrationStatus *registrationP);
 
+/* Function: Tclh_ErrorPointerNull
+ * Reports an error where a pointer is NULL.
+ *
+ * Parameters:
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
+ *
+ * The Tcl *errorCode* variable is set to a list of three elements: the
+ * *TCLH_EMBEDDER* macro value set by the extension, the literal string
+ * *INVALID_VALUE* and the error message.
+ *
+ * Returns:
+ * TCL_ERROR - Always returns this value so caller can just pass on the return
+ *             value from this function.
+ */
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorPointerNull(Tcl_Interp *interp);
+
+/* Function: Tclh_ErrorPointerObjType
+ * Reports an error where a pointer is the wrong type.
+ *
+ * Parameters:
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
+ * ptrObj  - The pointer in question. This is
+ *           included in the error message if not *NULL*.
+ * tag - Expected tag. This is included in error message if not *NULL*.
+ *
+ * The Tcl *errorCode* variable is set to a list of three elements: the
+ * *TCLH_EMBEDDER* macro value set by the extension, the literal string
+ * *WRONG_TYPE* and the error message.
+ *
+ * Returns:
+ * TCL_ERROR - Always returns this value so caller can just pass on the return
+ *             value from this function.
+ */
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorPointerObjType(Tcl_Interp *interp,
+                                                 Tcl_Obj *ptrObj,
+                                                 Tclh_PointerTypeTag tag);
+
+/* Function: Tclh_ErrorPointerObjRegistration
+ * Reports an error where a pointer is not registered or registered as the
+ * wrong type.
+ *
+ * Parameters:
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
+ * ptrObj  - The pointer in question. This is
+ *           included in the error message if not *NULL*.
+ * registration - registration status code.
+ *
+ * The Tcl *errorCode* variable is set to a list of three elements: the
+ * *TCLH_EMBEDDER* macro value set by the extension, the literal string
+ * *WRONG_TYPE* and the error message.
+ *
+ * Returns:
+ * TCL_ERROR - Always returns this value so caller can just pass on the return
+ *             value from this function.
+ */
+TCLH_LOCAL Tclh_ReturnCode
+Tclh_ErrorPointerObjRegistration(Tcl_Interp *interp,
+                              Tcl_Obj *ptrObj,
+                              Tclh_PointerRegistrationStatus regStatus);
+
 #ifdef TCLH_SHORTNAMES
 #define PointerLibInit            Tclh_PointerLibInit
 #define PointerLibFinit           Tclh_PointerLibFinit
@@ -750,6 +810,9 @@ Tclh_PointerObjDissect(Tcl_Interp *interp,
 #define PointerPin                Tclh_PointerPin
 #define PointerInvalidate         Tclh_PointerInvalidate
 #define PointerDissect            Tclh_PointerDissect
+#define ErrorPointerNull          Tclh_ErrorPointerNull
+#define ErrorPointerObjType       Tclh_ErrorPointerObjType
+#define ErrorPointerObjRegistration  Tclh_ErrorPointerObjRegistration
 #endif
 
 #ifdef TCLH_IMPL
