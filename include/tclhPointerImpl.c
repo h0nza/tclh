@@ -1133,7 +1133,7 @@ PointerRegistrationStatus(
 }
 
 int
-Tclh_PointerRegistered(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, void *pv)
+Tclh_PointerRegistered(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, const void *pv)
 {
     if (pv == NULL)
         return 0;
@@ -1146,7 +1146,7 @@ Tclh_PointerRegistered(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, void *pv)
 }
 
 Tclh_ReturnCode
-Tclh_PointerVerify(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, void *pv)
+Tclh_PointerVerify(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, const void *pv)
 {
     if (pv == NULL)
         return Tclh_ErrorPointerNull(interp);

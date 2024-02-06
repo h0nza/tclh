@@ -302,7 +302,7 @@ Tclh_PointerInvalidateTagged(Tcl_Interp *interp,
  * 1    - The pointer is registered.
  * 0    - The pointer is not registered.
  */
-TCLH_LOCAL Tclh_ReturnCode Tclh_PointerRegistered(Tcl_Interp *interp,
+TCLH_LOCAL int Tclh_PointerRegistered(Tcl_Interp *interp,
                                                   Tclh_LibContext *tclhCtxP,
                                                   const void *voidP);
 
