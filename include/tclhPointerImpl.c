@@ -1030,8 +1030,8 @@ Tclh_PointerCast(Tcl_Interp *interp,
             && !PointerTypeCompatible(registryP, newTag, oldTag)) {
             return PointerTypeMismatchError(interp, oldTag, newTag);
         }
-        /* If registered, we have to change registration */
-        if (ptrRecP) {
+        /* If registered, we have to change registration unless pinned */
+        if (ptrRecP && ptrRecP->nRefs != TCLH_POINTER_NREFS_MAX) {
             Tclh_PointerTypeTag tempTag;
             tempTag         = ptrRecP->tagObj;
             ptrRecP->tagObj = newTag;
