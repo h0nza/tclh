@@ -19,6 +19,25 @@
  */
 typedef Tcl_Obj *Tclh_PointerTypeTag;
 
+/* Typedef: Tclh_PointerTagRelation
+ */
+typedef enum Tclh_PointerTagRelation {
+    TCLH_TAG_RELATION_UNRELATED, /* Tags are unrelated and not convertible */
+    TCLH_TAG_RELATION_EQUAL,     /* Tags are the same */
+    TCLH_TAG_RELATION_IMPLICITLY_CASTABLE, /* Tag is implicitly castable */
+    TCLH_TAG_RELATION_EXPLICITLY_CASTABLE, /* Tag is explicitly castable */
+} Tclh_PointerTagRelation;
+
+/* Typedef: Tclh_PointerRegistrationStatus
+ */
+typedef enum Tclh_PointerRegistrationStatus {
+    TCLH_POINTER_REGISTRATION_MISSING,  /* Pointer is not registered */
+    TCLH_POINTER_REGISTRATION_WRONGTAG, /* Pointer is registered with different
+                                           tag */
+    TCLH_POINTER_REGISTRATION_OK,       /* Pointer tag matches registration */
+    TCLH_POINTER_REGISTRATION_DERIVED,  /* Pointer tag is implicitly castable to
+                                           registration */
+} Tclh_PointerRegistrationStatus;
 
 /* Section: Registered Pointers
  *
@@ -35,8 +54,8 @@ typedef Tcl_Obj *Tclh_PointerTypeTag;
  *
  * Pointers can be registered as valid with <Tclh_PointerRegister> before being
  * passed up to the script. When passed in from a script, their validity can be
- * checked with <Tclh_PointerVerify>. Pointers should be marked invalid as
- * appropriate by unregistering them with <Tclh_PointerUnregister> or
+ * checked with <Tclh_PointerVerifyTagged>. Pointers should be marked invalid as
+ * appropriate by unregistering them with <Tclh_PointerUnregisterTagged> or
  * alternatively <Tclh_PointerObjUnregister>. For convenience, when a pointer
  * may match one of several types, the <Tclh_PointerVerifyAnyOf> and
  * <Tclh_PointerObjVerifyAnyOf> take a variable number of type tags.
@@ -96,11 +115,11 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerLibInit(Tcl_Interp *interp,
  * At least one of interp and tclhCtxP must be non-NULL.
  *
  * The validity of a registered pointer can then be tested by with
- * <Tclh_PointerVerify> and reversed by calling <Tclh_PointerUnregister>.
+ * <Tclh_PointerVerifyTagged> and reversed by calling <Tclh_PointerUnregisterTagged>.
  * Registering a pointer that is already registered will raise an error if
  * the tags do not match or if the previous registration was for a counted
  * pointer. Otherwise the duplicate registration is a no-op and the pointer
- * is unregistered on the next call to <Tclh_PointerUnregister> no matter
+ * is unregistered on the next call to <Tclh_PointerUnregisterTagged> no matter
  * how many times it has been registered.
  *
  * Returns:
@@ -132,9 +151,9 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerRegister(Tcl_Interp *interp,
  * At least one of interp and tclhCtxP must be non-NULL.
  *
  * The validity of a registered pointer can then be tested by with
- * <Tclh_PointerVerify> and reversed by calling <Tclh_PointerUnregister>.
+ * <Tclh_PointerVerifyTagged> and reversed by calling <Tclh_PointerUnregisterTagged>.
  * A counted pointer that is registered multiple times will be treated
- * as valid until the same number of calls to <Tclh_PointerUnregister>.
+ * as valid until the same number of calls to <Tclh_PointerUnregisterTagged>.
  *
  * Registering a pointer that is already registered will raise an error if
  * the tags do not match or if the previous registration was for an uncounted
@@ -145,13 +164,71 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerRegister(Tcl_Interp *interp,
  * TCL_ERROR - pointer registration failed. An error message is stored in
  *             the interpreter.
  */
-TCLH_LOCAL Tclh_ReturnCode Tclh_PointerRegisterCounted(Tcl_Interp *interp,
-                                            Tclh_LibContext *tclhCtxP,
-                                            void *pointer,
-                                            Tclh_PointerTypeTag tag,
-                                            Tcl_Obj **objPP);
+TCLH_LOCAL Tclh_ReturnCode
+Tclh_PointerRegisterCounted(Tcl_Interp *interp,
+                            Tclh_LibContext *tclhCtxP,
+                            void *pointer,
+                            Tclh_PointerTypeTag tag,
+                            Tcl_Obj **objPP);
+
+/* Function: Tclh_PointerPin
+ * Registers a pointer value as pinned so it is always deemed valid
+ * and is not affected by unregistrations.
+ *
+ * Parameters:
+ * interp  - Tcl interpreter in which the pointer is to be registered.
+ *           May be NULL.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
+ * pointer - Pointer value to be pinned. This may or may not be already
+ *           registered.
+ * objPP   - if not NULL, a pointer to a new Tcl_Obj holding the pointer
+ *           representation is stored here on success. The Tcl_Obj has
+ *           a reference count of 0.
+ *
+ * At least one of interp and tclhCtxP must be non-NULL.
+ *
+ * The validity of a registered pointer can then be tested by with
+ * <Tclh_PointerVerifyTagged> and reversed by calling <Tclh_PointerUnpin>.
+ *
+ * Returns:
+ * TCL_OK    - pointer was successfully registered
+ * TCL_ERROR - pointer registration failed. An error message is stored in
+ *             the interpreter.
+ */
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerPin(Tcl_Interp *interp,
+                                           Tclh_LibContext *tclhCtxP,
+                                           void *pointer,
+                                           Tcl_Obj **objPP);
 
 /* Function: Tclh_PointerUnregister
+ * Unregisters a previously registered pointer.
+ *
+ * Parameters:
+ * interp   - Tcl interpreter in which the pointer is to be unregistered.
+ *           May be NULL.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
+ * pointer  - Pointer value to be unregistered.
+ *
+ * At least one of interp and tclhCtxP must be non-NULL.
+ *
+ * The pointer may have been registered either via <Tclh_PointerRegister> or
+ * <Tclh_PointerRegisterCounted>. In the former case, the pointer becomes
+ * immediately inaccessible (as defined by Tclh_PointerVerify). In the latter
+ * case, it will become inaccessible if it has been unregistered as many times
+ * as it has been registered.
+ *
+ * Returns:
+ * TCL_OK    - The pointer was successfully unregistered.
+ * TCL_ERROR - The pointer was not registered. An error message is 
+ *             left in interp.
+ */
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerUnregister(Tcl_Interp *interp,
+                                                  Tclh_LibContext *tclhCtxP,
+                                                  const void *pointer);
+
+/* Function: Tclh_PointerUnregisterTagged
  * Unregisters a previously registered pointer.
  *
  * Parameters:
@@ -166,7 +243,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerRegisterCounted(Tcl_Interp *interp,
  *
  * The pointer may have been registered either via <Tclh_PointerRegister> or
  * <Tclh_PointerRegisterCounted>. In the former case, the pointer becomes
- * immediately inaccessible (as defined by Tclh_PointerVerify). In the latter
+ * immediately inaccessible (as defined by Tclh_PointerVerifyTagged). In the latter
  * case, it will become inaccessible if it has been unregistered as many times
  * as it has been registered.
  *
@@ -175,12 +252,80 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerRegisterCounted(Tcl_Interp *interp,
  * TCL_ERROR - The pointer was not registered or was registered with a
  *             different type. An error message is left in interp.
  */
-TCLH_LOCAL Tclh_ReturnCode Tclh_PointerUnregister(Tcl_Interp *interp,
-                                       Tclh_LibContext *tclhCtxP,
-                                       const void *pointer,
-                                       Tclh_PointerTypeTag expected_tag);
+TCLH_LOCAL Tclh_ReturnCode
+Tclh_PointerUnregisterTagged(Tcl_Interp *interp,
+                             Tclh_LibContext *tclhCtxP,
+                             const void *pointer,
+                             Tclh_PointerTypeTag expected_tag);
+
+/* Function: Tclh_PointerInvalidateTagged
+ * Removes a pointer from the pointer registration database.
+ *
+ * Parameters:
+ * interp   - Tcl interpreter in which the pointer is to be unregistered.
+ *           May be NULL.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
+ * pointer  - Pointer value to be unregistered.
+ * expected_tag  - Type tag for the pointer.
+ *
+ * At least one of interp and tclhCtxP must be non-NULL.
+ *
+ * The pointer may have been registered via <Tclh_PointerRegister>,
+ * <Tclh_PointerRegisterCounted> or <Tclh_PointerPin>. In all cases, the
+ * pointer becomes invalid (as defined by Tclh_PointerVerifyTagged).
+ *
+ * Returns:
+ * TCL_OK    - The pointer was successfully unregistered or was not
+ *             registered in the first place.
+ * TCL_ERROR - The pointer was registered with a different type.
+ *             An error message is left in interp.
+ */
+TCLH_LOCAL Tclh_ReturnCode
+Tclh_PointerInvalidateTagged(Tcl_Interp *interp,
+                       Tclh_LibContext *tclhCtxP,
+                       const void *pointer,
+                       Tclh_PointerTypeTag expected_tag);
+
+/* Function: Tclh_PointerRegistered
+ * Verifies that the passed pointer is registered as a valid pointer.
+ *
+ * interp   - Tcl interpreter in which the pointer is to be verified.
+ *           May be NULL.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
+ * pointer  - Pointer value to be verified.
+ *
+ * At least one of interp and tclhCtxP must be non-NULL.
+ *
+ * Returns:
+ * 1    - The pointer is registered.
+ * 0    - The pointer is not registered.
+ */
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerRegistered(Tcl_Interp *interp,
+                                                  Tclh_LibContext *tclhCtxP,
+                                                  const void *voidP);
 
 /* Function: Tclh_PointerVerify
+ * Raises an error if the passed pointer is not registered as a valid pointer.
+ *
+ * interp   - Tcl interpreter in which the pointer is to be verified.
+ *           May be NULL.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
+ * pointer  - Pointer value to be verified.
+ *
+ * At least one of interp and tclhCtxP must be non-NULL.
+ *
+ * Returns:
+ * TCL_OK    - The pointer is registered.
+ * TCL_ERROR - The pointer is not registered. An error message is left in
+ *             the interpreter.
+ */
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerVerify(
+    Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, const void *voidP);
+
+/* Function: Tclh_PointerVerifyTagged
  * Verifies that the passed pointer is registered as a valid pointer
  * of a given type.
  *
@@ -189,8 +334,8 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerUnregister(Tcl_Interp *interp,
  * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
  *            the Tclh context associated with the interpreter is used.
  * pointer  - Pointer value to be verified.
- * expected_tag - Type tag for the pointer. If *NULL*, the pointer registration
- *                is verified but its tag is not checked.
+ * expected_tag - Type tag for the pointer. This must be implicitly castable
+ *                to the registered type.
  *
  * At least one of interp and tclhCtxP must be non-NULL.
  *
@@ -199,7 +344,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerUnregister(Tcl_Interp *interp,
  * TCL_ERROR - Pointer is unregistered or a different type. An error message
  *             is stored in interp.
  */
-TCLH_LOCAL Tclh_ReturnCode Tclh_PointerVerify(Tcl_Interp *interp,
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerVerifyTagged(Tcl_Interp *interp,
                                    Tclh_LibContext *tclhCtxP,
                                    const void *voidP,
                                    Tclh_PointerTypeTag expected_tag);
@@ -546,11 +691,107 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerObjCompare(Tcl_Interp *interp,
                                                   Tcl_Obj *ptr2Obj,
                                                   int *resultP);
 
+/* Function: Tclh_PointerObjDissect
+ * Retrieves various characteristics of a wrapped pointer.
+ *
+ * Parameters:
+ * interp   - Tcl interpreter in which the pointer is to be verified.
+ *            May be NULL.
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
+ * ptrObj   - Tcl_Obj containing a pointer value to dissect.
+ * expectedPtrTag - Type tag for the pointer. Ignored if *tagMatchP* is NULL.
+ * pvP      - If not NULL, the pointer value from objP is stored here
+ *            on success.
+ * ptrTagP  - location to store the pointer tag.
+ * tagMatchP - location to store tag matching status. This will be one of
+ *            the <Tclh_PointerTagRelation> members. May be NULL.
+ * registrationP - location to store registration status. This will be one
+ *            of the <Tclh_PointerRegistrationStatus> members. May be NULL.
+ *
+ * At least one of interp and tclhCtxP must be non-NULL.
+ *
+ * Returns:
+ * TCL_OK    - Success.
+ * TCL_ERROR - The passed *ptrObj* was not a wrapped pointer.
+ */
+TCLH_LOCAL Tclh_ReturnCode
+Tclh_PointerObjDissect(Tcl_Interp *interp,
+                       Tclh_LibContext *tclhCtxP,
+                       Tcl_Obj *ptrObj,
+                       Tclh_PointerTypeTag expectedPtrTag,
+                       void **pvP,
+                       Tclh_PointerTypeTag *ptrTagP,
+                       Tclh_PointerTagRelation *tagMatchP,
+                       Tclh_PointerRegistrationStatus *registrationP);
+
+/* Function: Tclh_ErrorPointerNull
+ * Reports an error where a pointer is NULL.
+ *
+ * Parameters:
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
+ *
+ * The Tcl *errorCode* variable is set to a list of three elements: the
+ * *TCLH_EMBEDDER* macro value set by the extension, the literal string
+ * *INVALID_VALUE* and the error message.
+ *
+ * Returns:
+ * TCL_ERROR - Always returns this value so caller can just pass on the return
+ *             value from this function.
+ */
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorPointerNull(Tcl_Interp *interp);
+
+/* Function: Tclh_ErrorPointerObjType
+ * Reports an error where a pointer is the wrong type.
+ *
+ * Parameters:
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
+ * ptrObj  - The pointer in question. This is
+ *           included in the error message if not *NULL*.
+ * tag - Expected tag. This is included in error message if not *NULL*.
+ *
+ * The Tcl *errorCode* variable is set to a list of three elements: the
+ * *TCLH_EMBEDDER* macro value set by the extension, the literal string
+ * *WRONG_TYPE* and the error message.
+ *
+ * Returns:
+ * TCL_ERROR - Always returns this value so caller can just pass on the return
+ *             value from this function.
+ */
+TCLH_LOCAL Tclh_ReturnCode Tclh_ErrorPointerObjType(Tcl_Interp *interp,
+                                                 Tcl_Obj *ptrObj,
+                                                 Tclh_PointerTypeTag tag);
+
+/* Function: Tclh_ErrorPointerObjRegistration
+ * Reports an error where a pointer is not registered or registered as the
+ * wrong type.
+ *
+ * Parameters:
+ * interp  - Tcl interpreter in which to report the error. May be NULL.
+ * ptrObj  - The pointer in question. This is
+ *           included in the error message if not *NULL*.
+ * registration - registration status code.
+ *
+ * The Tcl *errorCode* variable is set to a list of three elements: the
+ * *TCLH_EMBEDDER* macro value set by the extension, the literal string
+ * *WRONG_TYPE* and the error message.
+ *
+ * Returns:
+ * TCL_ERROR - Always returns this value so caller can just pass on the return
+ *             value from this function.
+ */
+TCLH_LOCAL Tclh_ReturnCode
+Tclh_ErrorPointerObjRegistration(Tcl_Interp *interp,
+                              Tcl_Obj *ptrObj,
+                              Tclh_PointerRegistrationStatus regStatus);
+
 #ifdef TCLH_SHORTNAMES
 #define PointerLibInit            Tclh_PointerLibInit
 #define PointerLibFinit           Tclh_PointerLibFinit
 #define PointerRegister           Tclh_PointerRegister
 #define PointerUnregister         Tclh_PointerUnregister
+#define PointerRegistered         Tclh_PointerRegistered
+#define PointerRegistrationAffirm Tclh_PointerRegistrationAffirm
 #define PointerVerify             Tclh_PointerVerify
 #define PointerObjUnregister      Tclh_PointerObjUnregister
 #define PointerObjUnregisterAnyOf Tclh_PointerObjUnregisterAnyOf
@@ -566,6 +807,12 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerObjCompare(Tcl_Interp *interp,
 #define PointerSubtags            Tclh_PointerSubtags
 #define PointerCast               Tclh_PointerCast
 #define PointerObjCompare         Tclh_PointerObjCompare
+#define PointerPin                Tclh_PointerPin
+#define PointerInvalidate         Tclh_PointerInvalidate
+#define PointerDissect            Tclh_PointerDissect
+#define ErrorPointerNull          Tclh_ErrorPointerNull
+#define ErrorPointerObjType       Tclh_ErrorPointerObjType
+#define ErrorPointerObjRegistration  Tclh_ErrorPointerObjRegistration
 #endif
 
 #ifdef TCLH_IMPL
