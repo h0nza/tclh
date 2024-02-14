@@ -435,6 +435,9 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerObjUnregisterAnyOf(Tcl_Interp *interp,
  * objP     - Tcl_Obj containing a pointer value to be verified.
  * pointerP - If not NULL, the pointer value from objP is stored here
  *            on success.
+ * tagP -     If not NULL, the pointer tag is stored here on success.
+ *            Note this is not necessarily *expected_tag* but implicitly
+ *            convertible to it.
  * expected_tag - Type tag for the pointer. May be *NULL* if type is not
  *                to be checked.
  *
@@ -445,11 +448,13 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerObjUnregisterAnyOf(Tcl_Interp *interp,
  * TCL_ERROR - The pointer was not registered or was registered with a
  *             different type. An error message is left in interp.
  */
-TCLH_LOCAL Tclh_ReturnCode Tclh_PointerObjVerify(Tcl_Interp *interp,
-                                      Tclh_LibContext *tclhCtxP,
-                                      Tcl_Obj *objP,
-                                      void **pointerP,
-                                      Tclh_PointerTypeTag expected_tag);
+TCLH_LOCAL Tclh_ReturnCode
+Tclh_PointerObjVerify(Tcl_Interp *interp,
+                      Tclh_LibContext *tclhCtxP,
+                      Tcl_Obj *objP,
+                      void **pointerP,
+                      Tclh_PointerTypeTag *tagP,
+                      Tclh_PointerTypeTag expected_tag);
 
 /* Function: Tclh_PointerObjVerifyAnyOf
  * Verifies a Tcl_Obj contains a wrapped pointer that is registered
@@ -520,7 +525,10 @@ Tclh_PointerUnwrap(Tcl_Interp *interp, Tcl_Obj *objP, void **pointerP);
  * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
  *            the Tclh context associated with the interpreter is used.
  * objP   - Tcl_Obj holding the wrapped pointer value.
- * pointerP - if not NULL, location to store unwrapped pointer.
+ * pointerP - if not NULL, location to store unwrapped pointer on success.
+ * tagP - if not NULL, the pointer tag is stored here on success. Note
+ *            this may not be same as *expected_tag* but one that is
+ *            implicitly convertible to it.
  * expected_tag - Type tag for the pointer. May be *NULL* if type is not
  *                to be checked. If not NULL, at least one of interp or
  *                registryP must not be NULL.
@@ -538,6 +546,7 @@ TCLH_LOCAL Tclh_ReturnCode Tclh_PointerUnwrapTagged(Tcl_Interp *interp,
                                          Tclh_LibContext *tclhCtxP,
                                          Tcl_Obj *objP,
                                          void **pointerP,
+                                         Tclh_PointerTypeTag *tagP,
                                          Tclh_PointerTypeTag expected_tag);
 
 /* Function: Tclh_PointerUnwrapAnyOf
