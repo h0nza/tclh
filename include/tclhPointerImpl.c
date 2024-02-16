@@ -516,18 +516,13 @@ TclhPointerRegister(Tcl_Interp *interp,
     if (pointer == NULL)
         return Tclh_ErrorPointerNull(interp);
 
-    if (tag && registration == TCLH_PINNED_POINTER) {
-        return Tclh_ErrorWrongType(
-            interp, NULL, "Attempt to pin a tagged pointer.");
-    }
-
     hTblPtr   = &registryP->pointers;
     he = Tcl_CreateHashEntry(hTblPtr, pointer, &newEntry);
 
     if (he) {
         if (newEntry) {
             ptrRecP = (TclhPointerRecord *)Tcl_Alloc(sizeof(*ptrRecP));
-            if (tag) {
+            if (tag && registration != TCLH_PINNED_POINTER) {
                 Tcl_IncrRefCount(tag);
                 ptrRecP->tagObj = tag;
             }
@@ -626,13 +621,14 @@ Tclh_PointerRegisterCounted(Tcl_Interp *interp,
 }
 
 Tclh_ReturnCode
-Tclh_PointerPin(Tcl_Interp *interp,
+Tclh_PointerRegisterPinned(Tcl_Interp *interp,
                 Tclh_LibContext *tclhCtxP,
                 void *pointer,
+                Tclh_PointerTypeTag tag,
                 Tcl_Obj **objPP)
 {
     return TclhPointerRegister(
-        interp, tclhCtxP, pointer, NULL, objPP, TCLH_PINNED_POINTER);
+        interp, tclhCtxP, pointer, tag, objPP, TCLH_PINNED_POINTER);
 }
 
 static int

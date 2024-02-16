@@ -182,6 +182,9 @@ Tclh_PointerRegisterCounted(Tcl_Interp *interp,
  *            the Tclh context associated with the interpreter is used.
  * pointer - Pointer value to be pinned. This may or may not be already
  *           registered.
+ * tag     - Type tag for the pointer. Pass NULL or 0 for typeless pointers.
+ *           The returned wrapper will be tagged but the registration will
+ *           not be associated with a tag.
  * objPP   - if not NULL, a pointer to a new Tcl_Obj holding the pointer
  *           representation is stored here on success. The Tcl_Obj has
  *           a reference count of 0.
@@ -196,10 +199,11 @@ Tclh_PointerRegisterCounted(Tcl_Interp *interp,
  * TCL_ERROR - pointer registration failed. An error message is stored in
  *             the interpreter.
  */
-TCLH_LOCAL Tclh_ReturnCode Tclh_PointerPin(Tcl_Interp *interp,
-                                           Tclh_LibContext *tclhCtxP,
-                                           void *pointer,
-                                           Tcl_Obj **objPP);
+TCLH_LOCAL Tclh_ReturnCode Tclh_PointerRegisterPinned(Tcl_Interp *interp,
+                                                      Tclh_LibContext *tclhCtxP,
+                                                      void *pointer,
+                                                      Tclh_PointerTypeTag tag,
+                                                      Tcl_Obj **objPP);
 
 /* Function: Tclh_PointerUnregister
  * Unregisters a previously registered pointer.
