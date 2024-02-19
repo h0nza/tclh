@@ -46,6 +46,7 @@ Tcl_Size Tclh_GetEncodingNulLength (Tcl_Encoding encoding)
                                NULL,
                                NULL,
                                NULL);
+    (void)status; /* Keep gcc happy */
     TCLH_ASSERT(status == TCL_OK);
     int i;
     for (i = 0; i < sizeof(buf); ++i) {

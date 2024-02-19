@@ -40,7 +40,7 @@
 TCLH_LOCAL Tclh_ReturnCode Tclh_AtomLibInit(Tcl_Interp *interp,
                                  Tclh_LibContext *tclhCtxP);
 
-/* Function: Tclh_GetAtom
+/* Function: Tclh_AtomGet
  * Returns a Tcl_Obj wrapping the string value.
  *
  * Parameters:

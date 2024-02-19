@@ -264,6 +264,7 @@ Tclh_PointerUnwrapTagged(Tcl_Interp *interp,
                          Tclh_LibContext *tclhCtxP,
                          Tcl_Obj *objP,
                          void **pvP,
+                         Tclh_PointerTypeTag *tagP,
                          Tclh_PointerTypeTag expectedTag)
 {
     Tclh_PointerTypeTag tag;
@@ -279,24 +280,26 @@ Tclh_PointerUnwrapTagged(Tcl_Interp *interp,
     pv  = PointerValueGet(objP);
 
     /*
-    * Check tag if 
+    * Check tag if
     *   - expectedTag is not NULL,
     *     and
     *   - the unwrapped pointer is not NULL or its tag is not NULL
     */
-    if (expectedTag && (pv || tag)) {
+    if (expectedTag && (pv || tag) && tag != expectedTag) {
         TclhPointerRegistry *registryP =
             TclhPointerGetRegistry(interp, tclhCtxP);
         if (registryP == NULL)
             return TCL_ERROR;
 
-        if (tag != expectedTag /* Avoid cost of PointerTypeCompatible */
-            && !PointerTypeCompatible(registryP, tag, expectedTag)) {
+        if (!PointerTypeCompatible(registryP, tag, expectedTag)) {
             return Tclh_ErrorPointerObjType(interp, objP, expectedTag);
         }
     }
 
-    *pvP = PointerValueGet(objP);
+    if (pvP)
+        *pvP = PointerValueGet(objP);
+    if (tagP)
+        *tagP = tag;
     return TCL_OK;
 }
 
@@ -362,9 +365,7 @@ TclhUnwrapAnyOfVA(Tcl_Interp *interp,
     while ((tag = va_arg(args, Tclh_PointerTypeTag)) != NULL) {
         /* Pass in tclhCtxP, not interp to avoid interp error message */
         lastTag = tag;
-        if (Tclh_PointerUnwrapTagged(NULL, tclhCtxP, objP, pvP, tag) == TCL_OK) {
-            if (tagP)
-                *tagP = tag;
+        if (Tclh_PointerUnwrapTagged(NULL, tclhCtxP, objP, pvP, tagP, tag) == TCL_OK) {
             return TCL_OK;
         }
     }
@@ -515,18 +516,13 @@ TclhPointerRegister(Tcl_Interp *interp,
     if (pointer == NULL)
         return Tclh_ErrorPointerNull(interp);
 
-    if (tag && registration == TCLH_PINNED_POINTER) {
-        return Tclh_ErrorWrongType(
-            interp, NULL, "Attempt to pin a tagged pointer.");
-    }
-
     hTblPtr   = &registryP->pointers;
     he = Tcl_CreateHashEntry(hTblPtr, pointer, &newEntry);
 
     if (he) {
         if (newEntry) {
             ptrRecP = (TclhPointerRecord *)Tcl_Alloc(sizeof(*ptrRecP));
-            if (tag) {
+            if (tag && registration != TCLH_PINNED_POINTER) {
                 Tcl_IncrRefCount(tag);
                 ptrRecP->tagObj = tag;
             }
@@ -625,13 +621,14 @@ Tclh_PointerRegisterCounted(Tcl_Interp *interp,
 }
 
 Tclh_ReturnCode
-Tclh_PointerPin(Tcl_Interp *interp,
+Tclh_PointerRegisterPinned(Tcl_Interp *interp,
                 Tclh_LibContext *tclhCtxP,
                 void *pointer,
+                Tclh_PointerTypeTag tag,
                 Tcl_Obj **objPP)
 {
     return TclhPointerRegister(
-        interp, tclhCtxP, pointer, NULL, objPP, TCLH_PINNED_POINTER);
+        interp, tclhCtxP, pointer, tag, objPP, TCLH_PINNED_POINTER);
 }
 
 static int
@@ -821,7 +818,7 @@ Tclh_PointerObjUnregister(Tcl_Interp *interp,
     void *pv = NULL;            /* Init to keep gcc happy */
     int   tclResult;
 
-    tclResult = Tclh_PointerUnwrapTagged(interp, tclhCtxP, objP, &pv, tag);
+    tclResult = Tclh_PointerUnwrapTagged(interp, tclhCtxP, objP, &pv, &tag, tag);
     if (tclResult == TCL_OK) {
         if (pv != NULL)
             tclResult = Tclh_PointerUnregisterTagged(interp, tclhCtxP, pv, tag);
@@ -879,12 +876,14 @@ Tclh_PointerObjVerify(Tcl_Interp *interp,
                       Tclh_LibContext *tclhCtxP,
                       Tcl_Obj *objP,
                       void **pointerP,
-                      Tclh_PointerTypeTag tag)
+                      Tclh_PointerTypeTag *tagP,
+                      Tclh_PointerTypeTag expectedTag)
 {
     void *pv = NULL;            /* Init to keep gcc happy */
     int   tclResult;
+    Tclh_PointerTypeTag tag;
 
-    tclResult = Tclh_PointerUnwrapTagged(interp, tclhCtxP, objP, &pv, tag);
+    tclResult = Tclh_PointerUnwrapTagged(interp, tclhCtxP, objP, &pv, &tag, expectedTag);
     if (tclResult == TCL_OK) {
         if (pv == NULL)
             tclResult = Tclh_ErrorPointerNull(interp);
@@ -893,6 +892,8 @@ Tclh_PointerObjVerify(Tcl_Interp *interp,
             if (tclResult == TCL_OK) {
                 if (pointerP)
                     *pointerP = pv;
+                if (tagP)
+                    *tagP = tag;
             }
         }
     }
@@ -1009,7 +1010,8 @@ Tclh_PointerCast(Tcl_Interp *interp,
     if (tclResult != TCL_OK)
         return tclResult;
 
-    tclResult = Tclh_PointerUnwrapTagged(interp, tclhCtxP, objP, &pv, NULL);
+    /* TBD - why not just call Tclh_PointerUnwrap here? */
+    tclResult = Tclh_PointerUnwrapTagged(interp, tclhCtxP, objP, &pv, NULL, NULL);
     if (tclResult != TCL_OK)
         return tclResult;
 
@@ -1133,7 +1135,7 @@ PointerRegistrationStatus(
 }
 
 int
-Tclh_PointerRegistered(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, void *pv)
+Tclh_PointerRegistered(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, const void *pv)
 {
     if (pv == NULL)
         return 0;
@@ -1146,7 +1148,7 @@ Tclh_PointerRegistered(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, void *pv)
 }
 
 Tclh_ReturnCode
-Tclh_PointerVerify(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, void *pv)
+Tclh_PointerVerify(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP, const void *pv)
 {
     if (pv == NULL)
         return Tclh_ErrorPointerNull(interp);
