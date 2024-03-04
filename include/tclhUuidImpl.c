@@ -74,16 +74,25 @@ static int  SetUuidObjFromAny(Tcl_Obj *objP)
 
     if (objP->typePtr == &gUuidVtbl)
         return TCL_OK;
+    char buf[37];
+    Tcl_Size len;
+    const char *s = Tcl_GetStringFromObj(objP, &len);
+    /* Accomodate Windows GUID style representation with curly braces */
+    if (s[0] == '{' && len == 38 && s[37] == '}') {
+        memcpy(buf, s, 36);
+        buf[36] = '\0';
+        s       = buf;
+    }
     uuidP = ckalloc(sizeof(*uuidP));
+
 #ifdef _WIN32
-    RPC_STATUS rpcStatus = UuidFromStringA((unsigned char *) Tcl_GetString(objP), 
-                                           uuidP);
+    RPC_STATUS rpcStatus = UuidFromStringA(s, uuidP);
     if (rpcStatus != RPC_S_OK) {
         ckfree(uuidP);
         return TCL_ERROR;
     }
 #else
-    if (uuid_parse(Tcl_GetString(objP), uuidP) != 0) {
+    if (uuid_parse(s, uuidP) != 0) {
         ckfree(uuidP);
         return TCL_ERROR;
     }
