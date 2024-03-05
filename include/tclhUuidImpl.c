@@ -64,7 +64,7 @@ static void StringFromUuidObj(Tcl_Obj *objP)
 #else
     objP->bytes = ckalloc(37); /* Number of bytes for string rep */
     objP->length = 36;         /* Not counting terminating \0 */
-    uuid_unparse_lower(IntrepGetUuid(objP), objP->bytes);
+    uuid_unparse_lower(IntrepGetUuid(objP)->bytes, objP->bytes);
 #endif
 }
 
@@ -79,7 +79,7 @@ static int  SetUuidObjFromAny(Tcl_Obj *objP)
     const char *s = Tcl_GetStringFromObj(objP, &len);
     /* Accomodate Windows GUID style representation with curly braces */
     if (s[0] == '{' && len == 38 && s[37] == '}') {
-        memcpy(buf, s, 36);
+        memcpy(buf, s+1, 36);
         buf[36] = '\0';
         s       = buf;
     }
@@ -92,7 +92,7 @@ static int  SetUuidObjFromAny(Tcl_Obj *objP)
         return TCL_ERROR;
     }
 #else
-    if (uuid_parse(s, uuidP) != 0) {
+    if (uuid_parse(s, uuidP->bytes) != 0) {
         ckfree(uuidP);
         return TCL_ERROR;
     }
@@ -139,7 +139,7 @@ Tcl_Obj *Tclh_UuidNewObj (Tcl_Interp *ip)
         }
     }
 #else
-    uuid_generate(uuidP);
+    uuid_generate(uuidP->bytes);
 #endif /* _WIN32 */
 
     objP = Tcl_NewObj();

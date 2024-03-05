@@ -16,7 +16,9 @@
   typedef UUID Tclh_UUID;
 #else
 # include <uuid/uuid.h>
-  typedef uuid_t Tclh_UUID;
+  typedef struct Tclh_UUID {
+      uuid_t bytes;
+  } Tclh_UUID;
 #endif
 
 /* Function: Tclh_UuidNewObj
