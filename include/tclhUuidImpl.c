@@ -53,7 +53,7 @@ static void StringFromUuidObj(Tcl_Obj *objP)
 #ifdef _WIN32
     UUID *uuidP = IntrepGetUuid(objP);
     unsigned char *uuidStr;
-    int  len;
+    Tcl_Size  len;
     if (UuidToStringA(uuidP, &uuidStr) != RPC_S_OK) {
         TCLH_PANIC("Out of memory stringifying UUID.");
     }
@@ -64,7 +64,7 @@ static void StringFromUuidObj(Tcl_Obj *objP)
 #else
     objP->bytes = ckalloc(37); /* Number of bytes for string rep */
     objP->length = 36;         /* Not counting terminating \0 */
-    uuid_unparse_lower(IntrepGetUuid(objP), objP->bytes);
+    uuid_unparse_lower(IntrepGetUuid(objP)->bytes, objP->bytes);
 #endif
 }
 
@@ -74,16 +74,25 @@ static int  SetUuidObjFromAny(Tcl_Obj *objP)
 
     if (objP->typePtr == &gUuidVtbl)
         return TCL_OK;
+    char buf[37];
+    Tcl_Size len;
+    const char *s = Tcl_GetStringFromObj(objP, &len);
+    /* Accomodate Windows GUID style representation with curly braces */
+    if (s[0] == '{' && len == 38 && s[37] == '}') {
+        memcpy(buf, s+1, 36);
+        buf[36] = '\0';
+        s       = buf;
+    }
     uuidP = ckalloc(sizeof(*uuidP));
+
 #ifdef _WIN32
-    RPC_STATUS rpcStatus = UuidFromStringA((unsigned char *) Tcl_GetString(objP), 
-                                           uuidP);
+    RPC_STATUS rpcStatus = UuidFromStringA(s, uuidP);
     if (rpcStatus != RPC_S_OK) {
         ckfree(uuidP);
         return TCL_ERROR;
     }
 #else
-    if (uuid_parse(Tcl_GetString(objP), uuidP) != 0) {
+    if (uuid_parse(s, uuidP->bytes) != 0) {
         ckfree(uuidP);
         return TCL_ERROR;
     }
@@ -130,7 +139,7 @@ Tcl_Obj *Tclh_UuidNewObj (Tcl_Interp *ip)
         }
     }
 #else
-    uuid_generate(uuidP);
+    uuid_generate(uuidP->bytes);
 #endif /* _WIN32 */
 
     objP = Tcl_NewObj();
