@@ -738,6 +738,30 @@ Tclh_PointerObjDissect(Tcl_Interp *interp,
                        Tclh_PointerTagRelation *tagMatchP,
                        Tclh_PointerRegistrationStatus *registrationP);
 
+/* Function: Tclh_PointerObjInfo
+ * Returns a dictionary containing pointer registration information.
+ *
+ * Parameters:
+ * interp - interpreter
+ * tclhCtxP - Tclh context as returned by <Tclh_LibInit> to use. If NULL,
+ *            the Tclh context associated with the interpreter is used.
+ * ptrObj   - Tcl_Obj containing a pointer value to dissect.
+ *
+ * The returned dictionary always contains the keys `Tag` containing the
+ * pointer tag and `Registration` containing one of the values
+ * `none`, `safe`, `pinned` or `counted`. If the `Registration` value
+ * is not `unregistered`, the dictionary contains the additional keys
+ * `RegisteredTag`, holding the tag of the pointer in the registry, and
+ * `Match` which may have one of the values `exact`, `derived` or `mismatch`.
+ *
+ * Returns:
+ * A Tcl_Obj dictionary on success, NULL on error.
+ */
+TCLH_LOCAL Tcl_Obj *Tclh_PointerObjInfo(Tcl_Interp *interp,
+                                        Tclh_LibContext *tclhCtxP,
+                                        Tcl_Obj *ptrObj);
+
+
 /* Function: Tclh_ErrorPointerNull
  * Reports an error where a pointer is NULL.
  *
@@ -822,7 +846,8 @@ Tclh_ErrorPointerObjRegistration(Tcl_Interp *interp,
 #define PointerObjCompare         Tclh_PointerObjCompare
 #define PointerPin                Tclh_PointerPin
 #define PointerInvalidate         Tclh_PointerInvalidate
-#define PointerDissect            Tclh_PointerDissect
+#define PointerObjDissect         Tclh_PointerObjDissect
+#define PointerObjInfo            Tclh_PointerObjInfo
 #define ErrorPointerNull          Tclh_ErrorPointerNull
 #define ErrorPointerObjType       Tclh_ErrorPointerObjType
 #define ErrorPointerObjRegistration  Tclh_ErrorPointerObjRegistration
