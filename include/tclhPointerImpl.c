@@ -543,49 +543,44 @@ TclhPointerRegister(Tcl_Interp *interp,
             Tcl_SetHashValue(he, ptrRecP);
         } else {
             ptrRecP = Tcl_GetHashValue(he);
-            /*
-             * If already existing, existing and passed-in pointer must
-             * - both must have the same type tag or implicitly castable
-             * - both be counted or both single reference.
-             * An exception is pointer is being pinned, its tag is ignored.
-             */
-            if (registration != TCLH_PINNED_POINTER
-                && !PointerTypeCompatible(registryP, tag, ptrRecP->tagObj))
-                return PointerTypeMismatchError(interp, tag, ptrRecP->tagObj);
-            /* Keep pinned pointers unchanged */
+            /* Note pinned pointers are unaffected */
             if (ptrRecP->nRefs != TCLH_POINTER_NREFS_MAX) {
-                switch (registration) {
-                case TCLH_UNCOUNTED_POINTER:
-                    if (ptrRecP->nRefs >= 0) {
-                        /* This is actually a counted or pinned pointer */
-                        return Tclh_ErrorExists(
-                            interp,
-                            "Registered counted pointer",
-                            NULL,
-                            "Attempt to register an uncounted pointer.");
-                    }
-                    /* Note ref count unchanged - not a counted pointer */
-                    break;
-                case TCLH_COUNTED_POINTER:
-                    if (ptrRecP->nRefs < 0) {
-                        /* This is an uncounted pointer */
-                        return Tclh_ErrorExists(
-                            interp,
-                            "Registered uncounted pointer",
-                            NULL,
-                            "Attempt to register a counted pointer.");
-                    }
-                    if (ptrRecP->nRefs < TCLH_POINTER_NREFS_MAX)
-                        ptrRecP->nRefs += 1;
-                    break;
-                case TCLH_PINNED_POINTER:
-                    /* Any registration converted to pinned */
-                    ptrRecP->nRefs = TCLH_POINTER_NREFS_MAX;
+                /*
+                 * If new registration is pinned, it takes precedence
+                 * Tags are immaterial in this case
+                 */
+                if (registration == TCLH_PINNED_POINTER) {
                     if (ptrRecP->tagObj) {
                         Tcl_DecrRefCount(ptrRecP->tagObj);
                         ptrRecP->tagObj = NULL;
                     }
-                    break;
+                    ptrRecP->nRefs = TCLH_POINTER_NREFS_MAX;
+                }
+                else {
+                    /* If the existing tag is compatible AND registration type is same
+                        */
+                    int tagCompatible =
+                        PointerTypeCompatible(registryP, tag, ptrRecP->tagObj);
+                    if (tagCompatible && registration == TCLH_UNCOUNTED_POINTER && ptrRecP->nRefs < 0) {
+                        /* Tag compatible and both are uncounted */
+                        /* Nothing to do, ref count unchanged */
+                    }
+                    else if (tagCompatible
+                             && registration == TCLH_COUNTED_POINTER
+                             && ptrRecP->nRefs > 0) {
+                        /* Tag compatible and counted */
+                        ptrRecP->nRefs += 1;
+                    }
+                    else {
+                        /* Incompatible tags or different registration. Overwrite */
+                        if (tag)
+                            Tcl_IncrRefCount(tag);
+                        if (ptrRecP->tagObj)
+                            Tcl_IncrRefCount(ptrRecP->tagObj);
+                        ptrRecP->tagObj = tag;
+                        ptrRecP->nRefs =
+                            registration == TCLH_UNCOUNTED_POINTER ? -1 : 1;
+                    }
                 }
             }
         }
@@ -1111,26 +1106,26 @@ PointerTagCompare(TclhPointerRegistry *registryP,
 }
 
 static Tclh_PointerRegistrationStatus
-PointerRegistrationStatus(
-    TclhPointerRegistry *registryP,
-    void *pv,
-    Tclh_PointerTypeTag tag
-)
+PointerRegistrationStatus(TclhPointerRegistry *registryP,
+                          void *pv,
+                          Tclh_PointerTypeTag tag)
 {
     Tcl_HashEntry *he;
 
     he = Tcl_FindHashEntry(&registryP->pointers, pv);
-    if (he == NULL)
+    if (he == NULL) {
         return TCLH_POINTER_REGISTRATION_MISSING;
-
-    TclhPointerRecord *ptrRecP = Tcl_GetHashValue(he);
-    switch (PointerTagCompare(registryP, tag, ptrRecP->tagObj)) {
+    }
+    else {
+        TclhPointerRecord *ptrRecP = Tcl_GetHashValue(he);
+        switch (PointerTagCompare(registryP, tag, ptrRecP->tagObj)) {
         case TCLH_TAG_RELATION_EQUAL:
             return TCLH_POINTER_REGISTRATION_OK;
         case TCLH_TAG_RELATION_IMPLICITLY_CASTABLE:
             return TCLH_POINTER_REGISTRATION_DERIVED;
         default:
             return TCLH_POINTER_REGISTRATION_WRONGTAG;
+        }
     }
 }
 
