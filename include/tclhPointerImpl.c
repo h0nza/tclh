@@ -1225,7 +1225,7 @@ Tclh_PointerObjInfo(Tcl_Interp *interp,
     infoObjs[2] = Tcl_NewStringObj("Registration", 12);
     he = Tcl_FindHashEntry(&registryP->pointers, pv);
     if (he == NULL) {
-        infoObjs[3] = Tcl_NewStringObj("none", 12);
+        infoObjs[3] = Tcl_NewStringObj("none", 4);
         nInfoObjs   = 4;
     }
     else {
