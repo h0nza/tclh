@@ -249,6 +249,27 @@ int Tclh_UtfToWinChars(Tclh_LibContext *tclhCtxP,
                        Tcl_Size *numCharsP
                        );
 
+/* Function: Tclh_ObjToWinCharsAlloc
+ * Converts a Tcl_Obj value to a WCHAR string in allocated storage.
+ *
+ * Parameters:
+ * tclhCtxP - Tclh context. May be NULL in which case a temporary Tcl_Encoding
+ *    context is used.
+ * objP - *Tcl_Obj* to be copied
+ * numCharsP - output location to hold the length (in number of characters,
+ *     not bytes) of the copied string. May be NULL. The length does not
+ *     include the terminating nul WCHAR.
+ *
+ * If the Tcl version supports encoding profiles, the encoding is converted
+ * using the replace profile.
+ *
+ * Returns:
+ * Pointer to the WCHAR string allocated using ckalloc or NULL on error.
+ */
+WCHAR *Tclh_ObjToWinCharsAlloc(Tclh_LibContext *tclhCtxP,
+                               Tcl_Obj *objP,
+                               Tcl_Size *numCharsP);
+
 #ifdef TCLH_LIFO_E_SUCCESS /* Only define if Lifo module is available */
 
 /* Function: Tclh_ObjToWinCharsLifo

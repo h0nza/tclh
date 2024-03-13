@@ -713,6 +713,45 @@ Tclh_UtfToWinChars(Tclh_LibContext *tclhCtxP,
     return ret;
 }
 
+WCHAR *
+Tclh_ObjToWinCharsAlloc(Tclh_LibContext *tclhCtxP,
+                        Tcl_Obj *objP,
+                        Tcl_Size *numCharsP)
+{
+    Tcl_Encoding enc;
+
+    enc = TclhGetUtf16Encoding(tclhCtxP);
+    TCLH_ASSERT(enc);
+
+    Tcl_Size numBytes;
+    Tcl_Size fromLen;
+    const char *fromP;
+    WCHAR *wsP;
+    int ret;
+
+    fromP = Tcl_GetStringFromObj(objP, &fromLen);
+    ret   = Tclh_UtfToExternalAlloc(tclhCtxP ? tclhCtxP->interp : NULL,
+                                 enc,
+                                 fromP,
+                                 fromLen,
+#ifdef TCLH_TCL87API
+                                 TCL_ENCODING_PROFILE_REPLACE,
+#else
+                                     0,
+#endif
+                                 (char **) &wsP,
+                                 &numBytes,
+                                 NULL);
+    TCLH_ASSERT(ret == TCL_OK); /* Because REPLACE profile => no encoding errors
+                                   and ckalloc => no memory alloc errors */
+    if (ret != TCL_OK) {
+        return NULL;
+    }
+    if (numCharsP)
+        *numCharsP = numBytes / sizeof(WCHAR);
+    return wsP;
+}
+
 #ifdef TCLH_LIFO_E_SUCCESS
 WCHAR *Tclh_ObjToWinCharsLifo(Tclh_LibContext *tclhCtxP,
                               Tclh_Lifo *memLifoP,
@@ -736,11 +775,12 @@ WCHAR *Tclh_ObjToWinCharsLifo(Tclh_LibContext *tclhCtxP,
                                  fromP,
                                  fromLen,
 #ifdef TCLH_TCL87API
-                                 TCL_ENCODING_PROFILE_REPLACE |
+                                 TCL_ENCODING_PROFILE_REPLACE,
+#else
+                                 0,
 #endif
-                                     TCL_ENCODING_START | TCL_ENCODING_END,
                                  memLifoP,
-                                 (char **) &wsP,
+                                 (char **)&wsP,
                                  &numBytes,
                                  NULL);
     TCLH_ASSERT(ret == TCL_OK); /* Because REPLACE profile => no encoding errors
