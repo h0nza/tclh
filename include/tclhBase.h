@@ -158,7 +158,9 @@ typedef int Tclh_ReturnCode;
  * This typedef is defined for 8.6 for compatibility with 8.7 and up.
  */
 #if TCLH_TCLAPI_VERSION < 0x0807
-typedef int Tcl_Size;
+# ifndef Tcl_Size
+  typedef int Tcl_Size;
+# endif
 # define Tcl_GetSizeIntFromObj Tcl_GetIntFromObj
 # define Tcl_NewSizeIntObj Tcl_NewIntObj
 # define TCL_SIZE_MAX      INT_MAX
