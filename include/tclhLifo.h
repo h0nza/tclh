@@ -14,7 +14,13 @@
 #define TCLH_LIFO_EXTERN
 
 typedef size_t Tclh_LifoUSizeT;
+#if defined(_WIN32) && defined(__GNUC__)
+/* MSVCRT does not support "z". Issue when building with MingW+msvcrt (not ucrt) */
+#define TCLH_LIFO_SIZE_MODIFIER "I"
+#else
 #define TCLH_LIFO_SIZE_MODIFIER "z"
+#endif
+
 
 typedef struct Tclh_Lifo Tclh_Lifo;
 typedef struct Tclh_LifoMarkInfo Tclh_LifoMarkInfo;
