@@ -449,21 +449,30 @@ SetPointerFromAny(Tcl_Interp *interp, Tcl_Obj *objP)
     void *pv;
     Tclh_PointerTypeTag tagObj;
     char *srep;
-    char *s;
+    int nfields;
+    char terminator;
+    int consumed;
 
     if (objP->typePtr == &gPointerType)
         return TCL_OK;
 
-    /* Pointers are address^tag, 0 or NULL*/
+    /* Pointers are address^tag, NULL*/
     srep = Tcl_GetString(objP);
-    if (sscanf(srep, "%p^", &pv) == 1) {
-        s = strchr(srep, '^');
-        if (s == NULL)
-            goto invalid_value;
-        if (s[1] == '\0')
+    if (sizeof(void*) == sizeof(unsigned int)) {
+        unsigned int ui;
+        nfields = sscanf(srep, "0x%x%c%n", &ui, &terminator, &consumed);
+        pv      = (void *)(uintptr_t)ui; /* No matter if scan failed */
+    }
+    else {
+        unsigned long long ull;
+        nfields = sscanf(srep, "0x%llx%c%n", &ull, &terminator, &consumed);
+        pv      = (void *)(uintptr_t)ull; /* No matter if scan failed */
+    }
+    if (nfields == 2 && terminator == '^') {
+        if (srep[consumed] == '\0')
             tagObj = NULL;
         else {
-            tagObj = Tcl_NewStringObj(s + 1, -1);
+            tagObj = Tcl_NewStringObj(srep+consumed, -1);
             Tcl_IncrRefCount(tagObj);
         }
     }
