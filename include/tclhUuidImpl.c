@@ -37,7 +37,7 @@ Tclh_Bool Tclh_UuidIsObjIntrep (Tcl_Obj *objP) {
 
 static void DupUuidObj(Tcl_Obj *srcObj, Tcl_Obj *dstObj)
 {
-    Tclh_UUID *uuidP = (Tclh_UUID *) ckalloc(16);
+    Tclh_UUID *uuidP = (Tclh_UUID *) Tcl_Alloc(16);
     memcpy(uuidP, IntrepGetUuid(srcObj), 16);
     IntrepSetUuid(dstObj, uuidP);
     dstObj->typePtr = &gUuidVtbl;
@@ -45,7 +45,7 @@ static void DupUuidObj(Tcl_Obj *srcObj, Tcl_Obj *dstObj)
 
 static void FreeUuidObj(Tcl_Obj *objP)
 {
-    ckfree(IntrepGetUuid(objP));
+    Tcl_Free(IntrepGetUuid(objP));
     IntrepSetUuid(objP, NULL);
 }
 
@@ -74,7 +74,7 @@ static void StringFromUuidObj(Tcl_Obj *objP)
         TCLH_PANIC("UUID string conversion failed.");
     }
     len         = strlen(buf);
-    objP->bytes = ckalloc(len+1);
+    objP->bytes = Tcl_Alloc(len+1);
     /* We want lower case uuids for consistency across platforms */
     for (i = 0, p = objP->bytes; i < len; ++p, ++i) {
         unsigned char ch = (unsigned char)buf[i];
@@ -85,7 +85,7 @@ static void StringFromUuidObj(Tcl_Obj *objP)
     CFRelease(strRef);
     CFRelease(uuidRef);
 #else
-    objP->bytes = ckalloc(37); /* Number of bytes for string rep */
+    objP->bytes = Tcl_Alloc(37); /* Number of bytes for string rep */
     objP->length = 36;         /* Not counting terminating \0 */
     uuid_unparse_lower(IntrepGetUuid(objP)->bytes, objP->bytes);
 #endif
@@ -107,13 +107,13 @@ static int  SetUuidObjFromAny(Tcl_Obj *objP)
         s       = buf;
         len -= 2;
     }
-    uuidP = ckalloc(sizeof(*uuidP));
+    uuidP = Tcl_Alloc(sizeof(*uuidP));
 
 #ifdef _WIN32
 
     RPC_STATUS rpcStatus = UuidFromStringA(s, uuidP);
     if (rpcStatus != RPC_S_OK) {
-        ckfree(uuidP);
+        Tcl_Free(uuidP);
         return TCL_ERROR;
     }
 
@@ -121,14 +121,17 @@ static int  SetUuidObjFromAny(Tcl_Obj *objP)
 
     CFStringRef strRef =
         CFStringCreateWithCString(NULL, s, kCFStringEncodingUTF8);
-    if (strRef == NULL)
+    if (strRef == NULL) {
+        Tcl_Free(uuidP);
         return TCL_ERROR;
+    }
     CFUUIDRef uuidRef = CFUUIDCreateFromString(NULL, strRef);
     if (uuidRef == NULL) {
+        Tcl_Free(uuidP);
         CFRelease(strRef);
         return TCL_ERROR;
     }
-    *uuidP            = CFUUIDGetUUIDBytes(uuidRef);
+    *uuidP = CFUUIDGetUUIDBytes(uuidRef);
 
     CFRelease(uuidRef);
     CFRelease(strRef);
@@ -136,7 +139,7 @@ static int  SetUuidObjFromAny(Tcl_Obj *objP)
 #else
 
     if (uuid_parse(s, uuidP->bytes) != 0) {
-        ckfree(uuidP);
+        Tcl_Free(uuidP);
         return TCL_ERROR;
     }
 
@@ -154,7 +157,7 @@ Tcl_Obj *Tclh_UuidWrap (const Tclh_UUID *from)
 
     objP = Tcl_NewObj();
     Tcl_InvalidateStringRep(objP);
-    uuidP = ckalloc(sizeof(*uuidP));
+    uuidP = Tcl_Alloc(sizeof(*uuidP));
     memcpy(uuidP, from, sizeof(*uuidP));
     IntrepSetUuid(objP, uuidP);
     objP->typePtr = &gUuidVtbl;
@@ -175,7 +178,7 @@ Tclh_UuidUnwrap(Tcl_Interp *interp, Tcl_Obj *objP, Tclh_UUID *uuidP)
 Tcl_Obj *Tclh_UuidNewObj (Tcl_Interp *ip)
 {
     Tcl_Obj *objP;
-    Tclh_UUID *uuidP = ckalloc(sizeof(*uuidP));
+    Tclh_UUID *uuidP = Tcl_Alloc(sizeof(*uuidP));
 #ifdef _WIN32
 
     if (UuidCreate(uuidP) != RPC_S_OK) {
