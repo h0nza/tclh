@@ -105,6 +105,7 @@ static int  SetUuidObjFromAny(Tcl_Obj *objP)
         memcpy(buf, s+1, 36);
         buf[36] = '\0';
         s       = buf;
+        len -= 2;
     }
     uuidP = ckalloc(sizeof(*uuidP));
 
@@ -123,6 +124,10 @@ static int  SetUuidObjFromAny(Tcl_Obj *objP)
     if (strRef == NULL)
         return TCL_ERROR;
     CFUUIDRef uuidRef = CFUUIDCreateFromString(NULL, strRef);
+    if (uuidRef == NULL) {
+        CFRelease(strRef);
+        return TCL_ERROR;
+    }
     *uuidP            = CFUUIDGetUUIDBytes(uuidRef);
 
     CFRelease(uuidRef);
