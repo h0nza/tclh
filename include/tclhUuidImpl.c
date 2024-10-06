@@ -6,6 +6,7 @@
  */
 
 #include "tclhUuid.h"
+#include <ctype.h>
 
 /*
  * Uuid: Tcl_Obj custom type
@@ -63,7 +64,9 @@ static void StringFromUuidObj(Tcl_Obj *objP)
     RpcStringFreeA(&uuidStr);
 #elif defined(__APPLE__)
     char buf[100];
+    char *p;
     size_t len;
+    int i;
     CFUUIDBytes *uuidP = IntrepGetUuid(objP);
     CFUUIDRef uuidRef  = CFUUIDCreateFromUUIDBytes(NULL, *uuidP);
     CFStringRef strRef = CFUUIDCreateString(NULL, uuidRef);
@@ -72,7 +75,11 @@ static void StringFromUuidObj(Tcl_Obj *objP)
     }
     len         = strlen(buf);
     objP->bytes = ckalloc(len+1);
-    memmove(objP->bytes, buf, len + 1);
+    /* We want lower case uuids for consistency across platforms */
+    for (i = 0, p = objP->bytes; i < len; ++p, ++i) {
+        *p = isascii(buf[i]) && isupper(buf[i]) ? tolower(buf[i]) : buf[i];
+    }
+    *p           = '\0';
     objP->length = len;         /* Not counting terminating \0 */
     CFRelease(strRef);
     CFRelease(uuidRef);
