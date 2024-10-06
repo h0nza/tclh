@@ -77,7 +77,8 @@ static void StringFromUuidObj(Tcl_Obj *objP)
     objP->bytes = ckalloc(len+1);
     /* We want lower case uuids for consistency across platforms */
     for (i = 0, p = objP->bytes; i < len; ++p, ++i) {
-        *p = isascii(buf[i]) && isupper(buf[i]) ? tolower(buf[i]) : buf[i];
+        unsigned char ch = (unsigned char)buf[i];
+        *p = isascii(ch) ? tolower(ch) : ch;
     }
     *p           = '\0';
     objP->length = len;         /* Not counting terminating \0 */
