@@ -61,6 +61,21 @@ static void StringFromUuidObj(Tcl_Obj *objP)
     objP->bytes  = Tclh_strdupn((char *)uuidStr, len);
     objP->length = len;
     RpcStringFreeA(&uuidStr);
+#elif defined(__APPLE__)
+    char buf[100];
+    size_t len;
+    CFUUIDBytes *uuidP = IntrepGetUuid(objP);
+    CFUUIDRef uuidRef  = CFUUIDCreateFromUUIDBytes(NULL, *uuidP);
+    CFStringRef strRef = CFUUIDCreateString(NULL, uuidRef);
+    if (!CFStringGetCString(strRef, buf, sizeof(buf), kCFStringEncodingUTF8)) {
+        TCLH_PANIC("UUID string conversion failed.");
+    }
+    len         = strlen(buf);
+    objP->bytes = ckalloc(len+1);
+    memmove(objP->bytes, buf, len + 1);
+    objP->length = len;         /* Not counting terminating \0 */
+    CFRelease(strRef);
+    CFRelease(uuidRef);
 #else
     objP->bytes = ckalloc(37); /* Number of bytes for string rep */
     objP->length = 36;         /* Not counting terminating \0 */
@@ -86,24 +101,40 @@ static int  SetUuidObjFromAny(Tcl_Obj *objP)
     uuidP = ckalloc(sizeof(*uuidP));
 
 #ifdef _WIN32
+
     RPC_STATUS rpcStatus = UuidFromStringA(s, uuidP);
     if (rpcStatus != RPC_S_OK) {
         ckfree(uuidP);
         return TCL_ERROR;
     }
+
+#elif defined(__APPLE__)
+
+    CFStringRef strRef =
+        CFStringCreateWithCString(NULL, s, kCFStringEncodingUTF8);
+    if (strRef == NULL)
+        return TCL_ERROR;
+    CFUUIDRef uuidRef = CFUUIDCreateFromString(NULL, strRef);
+    *uuidP            = CFFUUIDGetUUIDBytes(uuidRef);
+
+    CFRelease(uuidRef);
+    CFRelease(strRef);
+
 #else
+
     if (uuid_parse(s, uuidP->bytes) != 0) {
         ckfree(uuidP);
         return TCL_ERROR;
     }
-#endif /* _WIN32 */
+
+#endif
 
     IntrepSetUuid(objP, uuidP);
     objP->typePtr = &gUuidVtbl;
-    return TCL_OK; 
+    return TCL_OK;
 }
 
-Tcl_Obj *Tclh_UuidWrap (const Tclh_UUID *from) 
+Tcl_Obj *Tclh_UuidWrap (const Tclh_UUID *from)
 {
     Tcl_Obj *objP;
     Tclh_UUID *uuidP;
@@ -133,13 +164,23 @@ Tcl_Obj *Tclh_UuidNewObj (Tcl_Interp *ip)
     Tcl_Obj *objP;
     Tclh_UUID *uuidP = ckalloc(sizeof(*uuidP));
 #ifdef _WIN32
+
     if (UuidCreate(uuidP) != RPC_S_OK) {
         if (UuidCreateSequential(uuidP) != RPC_S_OK) {
             TCLH_PANIC("Unable to create UUID.");
         }
     }
+
+#elif defined(__APPLE__)
+
+    CFUUIDRef uuidRef = CFUUIDCreate(NULL);
+    *uuidP            = CFUUIDGetUUIDBytes(uuidRef);
+    CFRelease(uuidRef);
+
 #else
+
     uuid_generate(uuidP->bytes);
+
 #endif /* _WIN32 */
 
     objP = Tcl_NewObj();

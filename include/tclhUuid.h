@@ -14,6 +14,9 @@
 #ifdef _WIN32
 # include <rpc.h>
   typedef UUID Tclh_UUID;
+#elif defined(__APPLE__)
+# include <CoreFoundation/CFUUID.h>
+  typedef CFUUIDBytes Tclh_UUID;
 #else
 # include <uuid/uuid.h>
   typedef struct Tclh_UUID {
@@ -25,10 +28,13 @@
  * Generate a new UUID. The UUID is not guaranteed to be cryptographically
  * secure.
  *
+ * Parameters:
+ * interp - interpreter for error messages. May be NULL.
+ *
  * Returns:
- * Pointer to a Tcl_Obj wrapping a generated UUID.
+ * Pointer to a Tcl_Obj wrapping a generated UUID or NULL on error.
  */
-Tcl_Obj *Tclh_UuidNewObj ();
+Tcl_Obj *Tclh_UuidNewObj (Tcl_Interp *interp);
 
 /* Function: Tclh_UuidWrap
  * Wraps a Tclh_UUID as a Tcl_Obj.
