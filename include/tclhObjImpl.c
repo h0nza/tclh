@@ -17,6 +17,7 @@ Tclh_ReturnCode
 Tclh_ObjLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
 {
     Tcl_Obj *objP;
+    int ret;
 
     if (tclhCtxP == NULL) {
         if (Tclh_LibInit(interp, NULL) != TCL_OK)
@@ -55,13 +56,22 @@ Tclh_ObjLibInit(Tcl_Interp *interp, Tclh_LibContext *tclhCtxP)
     }
     gTclBignumType = Tcl_GetObjType("bignum"); /* Likely NULL as it is not registered */
     if (gTclBignumType == NULL) {
-        mp_int temp;
         objP    = Tcl_NewStringObj("0xffffffffffffffff", -1);
-        int ret = Tcl_GetBignumFromObj(interp, objP, &temp);
+#ifdef TCLH_TCL87API
+        void *mpIntPtr = NULL;
+        int type;
+        ret = Tcl_GetNumberFromObj(NULL, objP, &mpIntPtr, &type);
+        if (ret == TCL_OK && type == TCL_NUMBER_BIG) {
+            gTclBignumType = objP->typePtr;
+        }
+#else
+        mp_int temp;
+        ret = Tcl_GetBignumFromObj(NULL, objP, &temp);
         if (ret == TCL_OK) {
             gTclBignumType = objP->typePtr;
             mp_clear(&temp);
         }
+#endif
         Tcl_DecrRefCount(objP);
     }
 
@@ -225,17 +235,12 @@ Tcl_Obj *Tclh_ObjFromULong(unsigned long ul)
         return Tclh_ObjFromULongLong(ul);
 }
 
+#if TCL_MAJOR_VERSION < 9
 Tclh_ReturnCode
 Tclh_ObjToWideInt(Tcl_Interp *interp, Tcl_Obj *objP, Tcl_WideInt *wideP)
 {
-    /* TODO - can we just use Tcl_GetWideIntFromObj in Tcl9? Does it error if > WIDE_MAX? */
-    int ret;
-    Tcl_WideInt wide;
-    ret = Tcl_GetWideIntFromObj(interp, objP, &wide);
-    if (ret != TCL_OK)
-        return ret;
     /*
-     * Tcl_GetWideIntFromObj has several issues:
+     * Tcl_GetWideIntFromObj has several issues on Tcl 8.6:
      * - it will happily accept negative numbers in strings that will
      *   then show up as positive when retrieved. For example,
      *   Tcl_GWIFO(Tcl_NewStringObj(-18446744073709551615, -1)) will
@@ -249,6 +254,11 @@ Tclh_ObjToWideInt(Tcl_Interp *interp, Tcl_Obj *objP, Tcl_WideInt *wideP)
      * comparing sign of retrieved wide int with the sign stored in the
      * bignum representation.
      */
+    int ret;
+    Tcl_WideInt wide;
+    ret = Tcl_GetWideIntFromObj(interp, objP, &wide);
+    if (ret != TCL_OK)
+        return ret;
 
     if (objP->typePtr != gTclIntType && objP->typePtr != gTclWideIntType
         && objP->typePtr != gTclBooleanType
@@ -272,19 +282,13 @@ Tclh_ObjToWideInt(Tcl_Interp *interp, Tcl_Obj *objP, Tcl_WideInt *wideP)
         *wideP = wide;
     return ret;
 }
+#endif
 
+#if TCL_MAJOR_VERSION < 9
 Tclh_ReturnCode
 Tclh_ObjToULongLong(Tcl_Interp *interp, Tcl_Obj *objP, unsigned long long *ullP)
 {
     int ret;
-
-#if TCLH_TCLAPI_VERSION >= 0x0807
-    Tcl_WideUInt uwide;
-    ret = Tcl_GetWideUIntFromObj(interp, objP, &uwide);
-    if (ret == TCL_OK)
-        *ullP = uwide;
-    return ret;
-#else
     Tcl_WideInt wide;
 
     TCLH_ASSERT(sizeof(unsigned long long) == sizeof(Tcl_WideInt));
@@ -344,8 +348,8 @@ negative_error:
         interp,
         "RANGE",
         Tcl_NewStringObj("Negative values are not in range for unsigned types.", -1));
-#endif
 }
+#endif
 
 Tcl_Obj *Tclh_ObjFromULongLong(unsigned long long ull)
 {

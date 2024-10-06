@@ -324,8 +324,15 @@ TCLH_LOCAL Tcl_Obj *Tclh_ObjFromULong(unsigned long ull);
  * passed Tcl_Obj contains an integer that fits in a C *Tcl_WideInt* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
+#if TCL_MAJOR_VERSION < 9
 TCLH_LOCAL Tclh_ReturnCode
 Tclh_ObjToWideInt(Tcl_Interp *interp, Tcl_Obj *obj, Tcl_WideInt *ptr);
+#else
+TCLH_INLINE Tclh_ReturnCode
+Tclh_ObjToWideInt(Tcl_Interp *interp, Tcl_Obj *obj, Tcl_WideInt *ptr) {
+    return Tcl_GetWideIntFromObj(interp, obj, ptr);
+}
+#endif
 
 /* Function: Tclh_ObjFromWideInt
  * Returns a Tcl_Obj wrapping a *Tcl_WideInt*
@@ -375,8 +382,15 @@ Tclh_ObjToLongLong(Tcl_Interp *interp, Tcl_Obj *objP, signed long long *llP)
  * passed Tcl_Obj contains an integer that fits in a C *long* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
+#if TCL_MAJOR_VERSION < 9
 TCLH_LOCAL Tclh_ReturnCode
 Tclh_ObjToULongLong(Tcl_Interp *interp, Tcl_Obj *obj, unsigned long long *ptr);
+#else
+TCLH_INLINE Tclh_ReturnCode
+Tclh_ObjToULongLong(Tcl_Interp *interp, Tcl_Obj *obj, unsigned long long *ptr) {
+    return Tcl_GetWideUIntFromObj(interp, obj, ptr);
+}
+#endif
 
 /* Function: Tclh_ObjFromULongLong
  * Returns a Tcl_Obj wrapping a *unsigned long long*
