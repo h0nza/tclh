@@ -115,7 +115,7 @@ static int  SetUuidObjFromAny(Tcl_Obj *objP)
     if (strRef == NULL)
         return TCL_ERROR;
     CFUUIDRef uuidRef = CFUUIDCreateFromString(NULL, strRef);
-    *uuidP            = CFFUUIDGetUUIDBytes(uuidRef);
+    *uuidP            = CFUUIDGetUUIDBytes(uuidRef);
 
     CFRelease(uuidRef);
     CFRelease(strRef);
