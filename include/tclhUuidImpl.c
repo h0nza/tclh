@@ -8,6 +8,25 @@
 #include "tclhUuid.h"
 #include <ctype.h>
 
+static int isValidUuidString(const char *uuid, Tcl_Size len)
+{
+    const Tcl_Size breaks[] = {8, 13, 18, 23};
+    Tcl_Size lastBreak;
+    int i;
+    if (len != 36)
+        return 0;
+    lastBreak = -1;
+    for (i = 0; i < (sizeof(breaks)/sizeof(breaks[0])); ++i) {
+        Tcl_Size pos;
+        for (pos = lastBreak + 1; pos < breaks[i]; ++pos) {
+            if (!(isxdigit((unsigned char)uuid[pos])))
+                return 0;
+        }
+        lastBreak = breaks[i];
+    }
+    return 1;
+}
+
 /*
  * Uuid: Tcl_Obj custom type
  * Implements custom Tcl_Obj wrapper for Uuid.
@@ -118,6 +137,10 @@ static int  SetUuidObjFromAny(Tcl_Obj *objP)
     }
 
 #elif defined(__APPLE__)
+
+    /* Apple accepts bogus strings (truncated, wrong separators etc.) */
+    if (!isValidUuidString(s, len))
+        return TCL_ERROR;
 
     CFStringRef strRef =
         CFStringCreateWithCString(NULL, s, kCFStringEncodingUTF8);
