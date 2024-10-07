@@ -8,9 +8,10 @@
 #include "tclhUuid.h"
 #include <ctype.h>
 
+#ifdef __APPLE__
 static int isValidUuidString(const char *uuid, Tcl_Size len)
 {
-    const Tcl_Size breaks[] = {8, 13, 18, 23};
+    const Tcl_Size breaks[] = {8, 13, 18, 23, 36};
     Tcl_Size lastBreak;
     int i;
     if (len != 36)
@@ -23,9 +24,12 @@ static int isValidUuidString(const char *uuid, Tcl_Size len)
                 return 0;
         }
         lastBreak = breaks[i];
+        if (lastBreak != 36 && uuid[lastBreak] != '-')
+            return 0;
     }
     return 1;
 }
+#endif
 
 /*
  * Uuid: Tcl_Obj custom type
