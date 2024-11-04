@@ -324,7 +324,7 @@ TCLH_LOCAL Tcl_Obj *Tclh_ObjFromULong(unsigned long ull);
  * passed Tcl_Obj contains an integer that fits in a C *Tcl_WideInt* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
-#if TCL_MAJOR_VERSION < 9
+#ifndef TCLH_TCL87API
 TCLH_LOCAL Tclh_ReturnCode
 Tclh_ObjToWideInt(Tcl_Interp *interp, Tcl_Obj *obj, Tcl_WideInt *ptr);
 #else
@@ -382,7 +382,7 @@ Tclh_ObjToLongLong(Tcl_Interp *interp, Tcl_Obj *objP, signed long long *llP)
  * passed Tcl_Obj contains an integer that fits in a C *long* type. Otherwise
  * returns TCL_ERROR with an error message in the interpreter.
  */
-#if TCL_MAJOR_VERSION < 9
+#ifndef TCLH_TCL87API
 TCLH_LOCAL Tclh_ReturnCode
 Tclh_ObjToULongLong(Tcl_Interp *interp, Tcl_Obj *obj, unsigned long long *ptr);
 #else

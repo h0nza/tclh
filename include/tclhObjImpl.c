@@ -235,7 +235,7 @@ Tcl_Obj *Tclh_ObjFromULong(unsigned long ul)
         return Tclh_ObjFromULongLong(ul);
 }
 
-#if TCL_MAJOR_VERSION < 9
+#ifndef TCLH_TCL87API
 Tclh_ReturnCode
 Tclh_ObjToWideInt(Tcl_Interp *interp, Tcl_Obj *objP, Tcl_WideInt *wideP)
 {
@@ -284,7 +284,7 @@ Tclh_ObjToWideInt(Tcl_Interp *interp, Tcl_Obj *objP, Tcl_WideInt *wideP)
 }
 #endif
 
-#if TCL_MAJOR_VERSION < 9
+#ifndef TCLH_TCL87API
 Tclh_ReturnCode
 Tclh_ObjToULongLong(Tcl_Interp *interp, Tcl_Obj *objP, unsigned long long *ullP)
 {
