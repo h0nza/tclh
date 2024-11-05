@@ -100,7 +100,7 @@ TclhCleanupPointerRegistry(ClientData clientData, Tcl_Interp *interp)
     }
     Tcl_DeleteHashTable(&registryP->castables);
 
-    Tcl_Free((void *)registryP);
+    Tclh_Free(registryP);
 }
 
 static TclhPointerRegistry *
@@ -411,7 +411,7 @@ UpdatePointerTypeString(Tcl_Obj *objP)
         taglen = 0;
     }
     /* Assume 40 bytes enough for address */
-    bytes = Tcl_Alloc(40 + 1 + taglen + 1);
+    bytes = (char *) Tcl_Alloc(40 + 1 + taglen + 1);
     (void) TclhPrintAddress(PointerValueGet(objP), bytes, 40);
     len = Tclh_strlen(bytes);
     bytes[len] = '^';
@@ -503,7 +503,7 @@ TclhPointerRecordFree(TclhPointerRecord *ptrRecP)
     /* TBD - this assumes pointer tags are tagObj */
     if (ptrRecP->tagObj)
         Tcl_DecrRefCount(ptrRecP->tagObj);
-    Tcl_Free((void *)ptrRecP);
+    Tclh_Free(ptrRecP);
 }
 
 Tclh_ReturnCode

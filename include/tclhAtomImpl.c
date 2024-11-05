@@ -22,7 +22,7 @@ TclhCleanupAtomRegistry(ClientData clientData, Tcl_Interp *interp)
         Tcl_DecrRefCount(objP);
     }
     Tcl_DeleteHashTable(registryP);
-    Tcl_Free((void *)registryP);
+    Tclh_Free(registryP);
 }
 
 Tclh_ReturnCode
