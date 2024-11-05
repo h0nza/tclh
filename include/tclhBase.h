@@ -156,10 +156,9 @@ typedef int Tclh_ReturnCode;
  * Typedef: Tcl_Size
  * This typedef is defined for 8.6 for compatibility with 8.7 and up.
  */
-#if TCLH_TCLAPI_VERSION < 0x0807
-# ifndef Tcl_Size
+#ifndef TCLH_TCL87API
+# undef Tcl_Size
   typedef int Tcl_Size;
-# endif
 # define Tcl_GetSizeIntFromObj Tcl_GetIntFromObj
 # define Tcl_NewSizeIntObj Tcl_NewIntObj
 # define TCL_SIZE_MAX      INT_MAX
@@ -188,17 +187,25 @@ TCLH_INLINE Tcl_Size Tclh_strlen(const char *s) {
 
 TCLH_INLINE char *Tclh_strdup(const char *from) {
     Tcl_Size len = Tclh_strlen(from) + 1;
-    char *to = Tcl_Alloc(len);
+    char *to = (char *) Tcl_Alloc(len);
     memcpy(to, from, len);
     return to;
 }
 
 TCLH_INLINE char *Tclh_strdupn(const char *from, Tcl_Size len) {
-    char *to = Tcl_Alloc(len+1);
+    char *to = (char *) Tcl_Alloc(len+1);
     memcpy(to, from, len);
     to[len] = '\0';
     return to;
 }
+
+#if TCL_MAJOR_VERSION > 8
+#define Tclh_Free Tcl_Free
+#else
+TCLH_INLINE void Tclh_Free(void *p) {
+    Tcl_Free((char *)p);
+}
+#endif
 
 /* Section: Library initialization
  *

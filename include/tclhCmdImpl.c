@@ -119,7 +119,7 @@ static void UpdateStringParseargsOpt(Tcl_Obj *objP)
     /* We could just shift the bytes field from listObj to objP resetting
        the former to NULL. But I'm nervous about doing that behind Tcl's back */
     objP->length = listObj->length; /* Note does not include terminating \0 */
-    objP->bytes = Tcl_Alloc(listObj->length + 1);
+    objP->bytes = (char *) Tcl_Alloc(listObj->length + 1);
     memcpy(objP->bytes, listObj->bytes, listObj->length+1);
     Tcl_DecrRefCount(listObj);
 }
@@ -133,7 +133,7 @@ static void FreeParseargsOpt(Tcl_Obj *objP)
         for (i = 0; i < objP->internalRep.ptrAndLongRep.value; ++i) {
             CleanupOptionDescriptor(&optsP[i]);
         }
-        Tcl_Free((char *) optsP);
+        Tclh_Free(optsP);
     }
 
     objP->internalRep.ptrAndLongRep.ptr = NULL;
@@ -294,7 +294,7 @@ error_handler: /* Tcl error result must have been set */
             CleanupOptionDescriptor(&optsP[k]);
             --k;
         }
-        Tcl_Free((char *)optsP);
+        Tclh_Free(optsP);
     }
     return TCL_ERROR;
 }
@@ -738,9 +738,9 @@ Tclh_ReturnCode Tclh_ParseargsProc(
 vamoose: /* status should be TCL_OK or TCL_ERROR */
     
     if (valuesP && valuesP != values)
-        Tcl_Free((char *) valuesP);
+        Tclh_Free(valuesP);
     if (retP && retP != retObjs)
-        Tcl_Free((char *)retP);
+        Tclh_Free(retP);
     if (zeroObj)
         Tcl_DecrRefCount(zeroObj);
     if (oneObj)

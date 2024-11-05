@@ -286,7 +286,7 @@ Tclh_ExternalToUtfAlloc(
     if (numBytesOutP)
         *numBytesOutP = ds.length;/* Not including terminator */
     if (ds.string == ds.staticSpace) {
-        *bufPP = Tcl_Alloc(ds.length + 1);
+        *bufPP = (char *) Tcl_Alloc(ds.length + 1);
         memmove(*bufPP, ds.string, ds.length + 1);/* Includes terminating nul */
     }
     else {
@@ -341,7 +341,7 @@ Tclh_UtfToExternalAlloc(
         *numBytesOutP = ds.length;/* Not including terminator */
     if (ds.string == ds.staticSpace) {
         /* We do not know terminator size so allocate the whole buffer */
-        *bufPP = Tcl_Alloc(sizeof(ds.staticSpace));
+        *bufPP = (char *) Tcl_Alloc(sizeof(ds.staticSpace));
         memmove(*bufPP, ds.string, sizeof(ds.staticSpace));
     }
     else {

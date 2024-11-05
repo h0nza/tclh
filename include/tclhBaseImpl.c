@@ -32,7 +32,7 @@ TclhCleanupLib(ClientData clientData, Tcl_Interp *interp)
      * Note the CONTENT of ctxP is the responsibility of each module.
      * We do not clean that up here.
      */
-    Tcl_Free((void *)ctxP);
+    Tclh_Free(ctxP);
 }
 
 Tclh_ReturnCode
@@ -51,7 +51,7 @@ Tclh_LibInit(Tcl_Interp *interp, Tclh_LibContext **tclhCtxPP)
         /* Assumes Tcl stubs init already done but not tommath */
 #if defined(USE_TCL_STUBS) && defined(TCLH_USE_TCL_TOMMATH)
         if (Tcl_TomMath_InitStubs(interp, 0) == NULL) {
-            Tcl_Free((char *)ctxP);
+            Tclh_Free(ctxP);
             return TCL_ERROR;
         }
 #endif
